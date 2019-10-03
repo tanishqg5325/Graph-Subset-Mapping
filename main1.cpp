@@ -20,20 +20,26 @@ int main(int argc, char const *argv[])
     ios_base::sync_with_stdio(false);
     cin.tie(NULL); cout.tie(NULL);
 
-    if(argc != 2) {cout<<"Insufficient Parameters\n"; return 0;}
+    assert(argc == 2);
 
     int n1 = 0, n2 = 0, u, v;   // n1 = # vertices in smaller graph (g1), n2 = # vertices in larger graph (g2)
     vector<pii> e1, e2;         // e1 = edge list of smaller graph (g1), e2 = edge list of larger graph (g2)
-    cin>>u>>v;
+    
+    string file_name = "";
+    for(int i=0; argv[1][i] != '\0'; i++) file_name += argv[1][i];
+    ifstream graph_input;
+    graph_input.open(file_name + ".graphs");
+
+    graph_input >> u >> v;
     while(u && v)
     {
         e2.pb({u-1, v-1});
         n2 = max(n2, max(u, v));
-        cin>>u>>v;
+        graph_input >> u >> v;
     }
 
-    string line; pii e; getline(cin, line);
-    while(getline(cin, line))
+    string line; pii e; getline(graph_input, line);
+    while(getline(graph_input, line))
     {
         if(line == "") break;
         e = processLine(line);
@@ -41,26 +47,32 @@ int main(int argc, char const *argv[])
         n1 = max(n1, max(e.X, e.Y));
     }
 
+    graph_input.close();
+
     vector<int> g1[n1], g2[n2];     // adjacency list of g1 and g2
     for(auto &i : e1) g1[i.X].pb(i.Y);
     for(auto &i : e2) g2[i.X].pb(i.Y);
     
     ofstream sat_input;
-    string file_name = "";
-    for(int i=0; argv[1][i] != '\0'; i++) file_name += argv[1][i];
-    file_name += ".satinput";
-    sat_input.open(file_name);
+    sat_input.open(file_name + ".satinput");
     
     // TODO: Handle the case of n1 > n2
 
     string ans = "", tmp;
     int nov = 0, noc = 0; // nov = number of variables, noc = number of clauses
 
+    ofstream encoding;
+    encoding.open(file_name + ".encoding");
+
     // encoding for each variable
     map<pii, int> mp;
     for(int i=0;i<n1;i++)
         for(int j=0;j<n2;j++)
+        {
             mp[{i, j}] = ++nov;
+            encoding << i+1 << " " << j+1 << " " << nov << "\n";
+        }
+    encoding.close();
     
     // atleast one mapping clauses: O(n1*n2)
     for(int i=0;i<n1;i++)
@@ -78,6 +90,20 @@ int main(int argc, char const *argv[])
                 ans += to_string(-mp[{i, j}]) + " " + to_string(-mp[{i, k}]) + " 0\n";
                 noc++;
             }
+
+    // one-one mapping: O(n1*n1*n2)
+    for(int i=0;i<n2;i++)
+    {
+        for(int j=0;j<n1;j++)
+        {
+            tmp = to_string(-mp[{j, i}]) + " ";
+            for(int k=j+1;k<n1;k++)
+            {
+                ans += tmp + to_string(-mp[{k, i}]) + " 0\n";
+                noc++;
+            }
+        }
+    }
 
     // neighbour clauses: O(n1*n2 + m1*m2)
     for(int i=0;i<n1;i++)
