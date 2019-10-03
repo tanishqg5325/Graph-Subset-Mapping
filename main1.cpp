@@ -53,7 +53,8 @@ int main(int argc, char const *argv[])
     
     // TODO: Handle the case of n1 > n2
 
-    string ans = ""; int nov=0, noc = 0; // nov = number of variables, noc = number of clauses
+    string ans = "", tmp;
+    int nov=0, noc = 0; // nov = number of variables, noc = number of clauses
 
     // encoding for each variable
     map<pii, int> mp;
@@ -61,7 +62,7 @@ int main(int argc, char const *argv[])
         for(int j=0;j<n2;j++)
             mp[{i, j}] = ++nov;
     
-    // atleast one mapping clauses
+    // atleast one mapping clauses: O(n1*n2)
     for(int i=0;i<n1;i++)
     {
         for(int j=0;j<n2;j++)
@@ -69,7 +70,7 @@ int main(int argc, char const *argv[])
         ans += "0\n"; noc++;
     }
 
-    // exactly one mapping clauses
+    // exactly one mapping clauses: O(n1*n2*n2)
     for(int i=0;i<n1;i++)
         for(int j=0;j<n2;j++)
             for(int k=j+1;k<n2;k++)
@@ -77,6 +78,24 @@ int main(int argc, char const *argv[])
                 ans += to_string(-mp[{i, j}]) + " " + to_string(-mp[{i, k}]) + " 0\n";
                 noc++;
             }
+
+    // neighbour clauses
+    for(int i=0;i<n1;i++)
+    {
+        if(g1[i].empty()) continue;
+        for(int j=0;j<n2;j++)
+        {
+            if(g2[j].empty()) continue;
+            tmp = to_string(-mp[{i, j}]) + " ";
+            for(int k : g1[i])
+            {
+                ans += tmp;
+                for(int l : g2[j])
+                    ans += to_string(mp[{k, l}]) + " ";
+                ans += "0\n"; noc++;
+            }
+        }
+    }
     
     ans = "p cnf " + to_string(nov) + " " + to_string(noc) + "\n" + ans;
     sat_input << ans;
