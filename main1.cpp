@@ -54,7 +54,7 @@ int main(int argc, char const *argv[])
     // TODO: Handle the case of n1 > n2
 
     string ans = "", tmp;
-    int nov=0, noc = 0; // nov = number of variables, noc = number of clauses
+    int nov = 0, noc = 0; // nov = number of variables, noc = number of clauses
 
     // encoding for each variable
     map<pii, int> mp;
@@ -79,7 +79,7 @@ int main(int argc, char const *argv[])
                 noc++;
             }
 
-    // neighbour clauses
+    // neighbour clauses: O(n1*n2 + m1*m2)
     for(int i=0;i<n1;i++)
     {
         if(g1[i].empty()) continue;
@@ -93,6 +93,28 @@ int main(int argc, char const *argv[])
                 for(int l : g2[j])
                     ans += to_string(mp[{k, l}]) + " ";
                 ans += "0\n"; noc++;
+            }
+        }
+    }
+
+    // non-neighbour clauses: O(n1*n1*(n2+m2))
+    for(int i=0;i<n1;i++)
+    {
+        bool isPresent[n1]{};
+        for(int j : g1[i]) isPresent[j] = 1;
+        isPresent[i] = 1;
+        for(int j=0;j<n1;j++)
+        {
+            if(isPresent[j]) continue;
+            for(int k=0;k<n2;k++)
+            {
+                if(g2[k].empty()) continue;
+                tmp = to_string(-mp[{i, k}]) + " ";
+                for(int l : g2[k])
+                {
+                    ans += tmp + to_string(-mp[{j, l}]) + " 0\n";
+                    noc++;
+                }
             }
         }
     }
