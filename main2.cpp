@@ -6,14 +6,18 @@ using namespace std;
 typedef long long ll;
 typedef pair<int,int> pii;
 
-map<int, pii> mp;
+// map<int, pii> mp;
 
+pii numVertices;  // X is n1, Y is n2
 void processLine(string line)
 {
     stringstream ss(line); string ver; vector<string> v;
     while(ss >> ver) v.pb(ver);
-    assert(v.size() == 3);
-    mp[stoi(v[2])] = {stoi(v[0]), stoi(v[1])};
+    assert(v.size() == 2);
+
+    numVertices.X = stoi(v[0]);
+    numVertices.Y = stoi(v[1]);
+    // mp[stoi(v[2])] = {stoi(v[0]), stoi(v[1])};
 }
 
 int main(int argc, char const *argv[])
@@ -23,9 +27,9 @@ int main(int argc, char const *argv[])
 
     assert(argc == 2);
 
-    string file_name = "";
-    for(int i=0; argv[1][i] != '\0'; i++) file_name += argv[1][i];
-
+    // string file_name = "";
+    // for(int i=0; argv[1][i] != '\0'; i++) file_name += argv[1][i];
+    string file_name = argv[1];
     ifstream encoding;
     encoding.open(file_name + ".encoding");
 
@@ -40,7 +44,7 @@ int main(int argc, char const *argv[])
     ifstream sat_output; ofstream mapping;
     sat_output.open(file_name + ".satoutput");
     mapping.open(file_name + ".mapping");
-    
+
     sat_output >> line;
     if(line == "UNSAT")
     {
@@ -57,8 +61,11 @@ int main(int argc, char const *argv[])
     while(ss >> var)
     {
         tmp = stoi(var);
-        if(tmp > 0)
-            mapping << mp[tmp].X << " " << mp[tmp].Y << "\n";
+        if(tmp > 0){
+          int firstCoordinate = ceil(float(((float)tmp / (numVertices.Y))));
+          int secondCoordinate = tmp % numVertices.Y == 0 ? numVertices.Y : tmp % numVertices.Y;
+          mapping << firstCoordinate << " " << secondCoordinate << "\n";
+        }
     }
     mapping.close();
 
