@@ -61,8 +61,8 @@ int main(int argc, char const *argv[])
 
     ofstream encoding;
     encoding.open(file_name + ".encoding");
-    encoding<< n1 << " " << n2 << "\n";
-    encoding.close();
+    // encoding<< n1 << " " << n2 << "\n";
+
     // encoding for each variable
     map<pii, int> mp; bool flag = 1;
     vector<int> domain[n1];
@@ -70,15 +70,15 @@ int main(int argc, char const *argv[])
     {
         for(int j=0;j<n2;j++)
         {
-            ++nov;
             if(g1_incoming[i].size() <= g2_incoming[j].size() && g1_outgoing[i].size() <= g2_outgoing[j].size()){
-                mp[{i, j}] = nov;
+                mp[{i, j}] = ++nov;
                 domain[i].pb(j);
+                encoding << i+1 << " " << j+1 << " " << nov << "\n";
             }
-            // encoding << i+1 << " " << j+1 << " " << nov << "\n";
         }
         if(domain[i].empty()) {flag = 0; break;}
     }
+    encoding.close();
 
     if(n1 > n2 || flag == 0)
     {
@@ -128,7 +128,6 @@ int main(int argc, char const *argv[])
         if(g1_outgoing[i].empty()) continue;
         for(int j : domain[i])
         {
-            // if(g2_outgoing[j].empty()) continue;
             tmp = to_string(-mp[{i, j}]) + " ";
             for(int k : g1_outgoing[i])
             {
