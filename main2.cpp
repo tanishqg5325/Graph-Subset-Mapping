@@ -27,8 +27,6 @@ int main(int argc, char const *argv[])
 
     assert(argc == 2);
 
-    // string file_name = "";
-    // for(int i=0; argv[1][i] != '\0'; i++) file_name += argv[1][i];
     string file_name = argv[1];
     ifstream encoding;
     encoding.open(file_name + ".encoding");
@@ -57,13 +55,14 @@ int main(int argc, char const *argv[])
     getline(sat_output, line);
     sat_output.close();
 
-    stringstream ss(line); string var; int tmp;
+    stringstream ss(line); string var;
+    int tmp, firstCoordinate, secondCoordinate;
     while(ss >> var)
     {
         tmp = stoi(var);
         if(tmp > 0){
-          int firstCoordinate = ceil(float(((float)tmp / (numVertices.Y))));
-          int secondCoordinate = tmp % numVertices.Y == 0 ? numVertices.Y : tmp % numVertices.Y;
+          firstCoordinate = ceil(float(((float)tmp / (numVertices.Y))));
+          secondCoordinate = tmp % numVertices.Y == 0 ? numVertices.Y : tmp % numVertices.Y;
           mapping << firstCoordinate << " " << secondCoordinate << "\n";
         }
     }
