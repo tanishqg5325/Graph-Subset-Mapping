@@ -89,6 +89,57 @@ int main(int argc, char const *argv[])
         return 0;
     }
 
+
+    vector<vector<int>> apsp_g1(n1, vector<int>(n1, INT_MAX));
+    vector<vector<int>> apsp_g2(n2, vector<int>(n2, INT_MAX));
+
+    //setting g1
+
+    for(int i=0; i<n1; ++i){
+      // i is the source
+      apsp_g1[i][i] = 0;
+      list<int> bfs_queue;
+      vector<int> visited(n1, false);
+      bfs_queue.push_back(i);
+      visited[i] = true;
+      while(!bfs_queue.empty()){
+        int node = bfs_queue.front();
+        bfs_queue.pop_front();
+        for(int j=0; j<g1_outgoing[node].size(); ++j){
+          int child = g1_outgoing[node][j];
+          if(!visited[child]){
+            bfs_queue.push_back(child);
+            visited[child] = true;
+            apsp_g1[i][child] = apsp_g1[i][node] + 1;
+          }
+        }
+      }
+    }
+
+    //setting g2
+
+    for(int i=0; i<n2; ++i){
+      // i is the source
+      apsp_g2[i][i] = 0;
+      list<int> bfs_queue;
+      vector<int> visited(n2, false);
+      bfs_queue.push_back(i);
+      visited[i] = true;
+      while(!bfs_queue.empty()){
+        int node = bfs_queue.front();
+        bfs_queue.pop_front();
+        for(int j=0; j<g2_outgoing[node].size(); ++j){
+          int child = g2_outgoing[node][j];
+          if(!visited[child]){
+            bfs_queue.push_back(child);
+            visited[child] = true;
+            apsp_g2[i][child] = apsp_g2[i][node] + 1;
+          }
+        }
+      }
+    }
+
+
     // atleast one mapping clauses: O(n1*n2)
     for(int i=0;i<n1;i++)
     {
@@ -122,6 +173,35 @@ int main(int argc, char const *argv[])
                 }
         }
 
+    //Shortest path clauses O(n1*n1*n2*n2 + n2*(n2+m2))
+    for(int i=0; i<n2; ++i){
+      // shortest_path_array = shortest_paths(from i)
+      for(int j=i+1; j<n2; ++j){
+        for(int k=0; k<n1; ++k){
+          for(int l=k+1; l<n1; ++l){
+            if(apsp_g1[k][l] < apsp_g2[i][j] || apsp_g1[l][k] < apsp_g2[j][i]){
+              if(mp[{k, i}] && mp[{l, j}]){
+                ans += to_string(-mp[{k, i}]) + " " + to_string(-mp[{l, j}]) + " 0\n";
+              }
+            }
+            if(apsp_g1[k][l] < apsp_g2[j][i] || apsp_g1[l][k] < apsp_g2[i][j]){
+              if(mp[{l, i}] && mp[{k, j}]){
+                ans += to_string(-mp[{l, i}]) + " " + to_string(-mp[{k, j}]) + " 0\n";
+              }
+            }
+          }
+
+
+        }
+
+
+      }
+
+
+    }
+
+
+
     // neighbour clauses: O(n1*n2 + m1*m2)
     for(int i=0;i<n1;i++)
     {
@@ -153,7 +233,7 @@ int main(int argc, char const *argv[])
             {
                 if(g2_outgoing[k].empty()) continue;
                 tmp = to_string(-mp[{i, k}]) + " ";
-                for(int l : g2_outgoing[k]) 
+                for(int l : g2_outgoing[k])
                     if(mp[{j, l}]) {
                         ans += tmp + to_string(-mp[{j, l}]) + " 0\n";
                         noc++;
