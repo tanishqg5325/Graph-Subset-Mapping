@@ -89,7 +89,7 @@ int main(int argc, char const *argv[])
         return 0;
     }
 
-
+/*
     vector<vector<int>> apsp_g1(n1, vector<int>(n1, INT_MAX));
     vector<vector<int>> apsp_g2(n2, vector<int>(n2, INT_MAX));
 
@@ -97,53 +97,49 @@ int main(int argc, char const *argv[])
 
     for(int i=0; i<n1; ++i){
       // i is the source
-      apsp_g1[i][i] = 0;
-      list<int> bfs_queue;
-      vector<int> visited(n1, false);
-      bfs_queue.push_back(i);
-      visited[i] = true;
-      while(!bfs_queue.empty()){
-        int node = bfs_queue.front();
-        bfs_queue.pop_front();
-        for(int j=0; j<g1_outgoing[node].size(); ++j){
-          int child = g1_outgoing[node][j];
-          if(!visited[child]){
-            bfs_queue.push_back(child);
-            visited[child] = true;
-            apsp_g1[i][child] = apsp_g1[i][node] + 1;
-          }
+        apsp_g1[i][i] = 0;
+        queue<int> bfs_queue;
+        vector<bool> visited(n1, false);
+        bfs_queue.push(i);
+        visited[i] = true;
+        while(!bfs_queue.empty()){
+            int node = bfs_queue.front();
+            bfs_queue.pop();
+            for(int &j : g1_outgoing[node])
+                if(!visited[j]){
+                    bfs_queue.push(j);
+                    visited[j] = true;
+                    apsp_g1[i][j] = apsp_g1[i][node] + 1;
+                }
         }
-      }
     }
 
     //setting g2
 
     for(int i=0; i<n2; ++i){
       // i is the source
-      apsp_g2[i][i] = 0;
-      list<int> bfs_queue;
-      vector<int> visited(n2, false);
-      bfs_queue.push_back(i);
-      visited[i] = true;
-      while(!bfs_queue.empty()){
-        int node = bfs_queue.front();
-        bfs_queue.pop_front();
-        for(int j=0; j<g2_outgoing[node].size(); ++j){
-          int child = g2_outgoing[node][j];
-          if(!visited[child]){
-            bfs_queue.push_back(child);
-            visited[child] = true;
-            apsp_g2[i][child] = apsp_g2[i][node] + 1;
-          }
+        apsp_g2[i][i] = 0;
+        queue<int> bfs_queue;
+        vector<bool> visited(n2, false);
+        bfs_queue.push(i);
+        visited[i] = true;
+        while(!bfs_queue.empty()){
+            int node = bfs_queue.front();
+            bfs_queue.pop();
+            for(int &j : g2_outgoing[node])
+                if(!visited[j]){
+                    bfs_queue.push(j);
+                    visited[j] = true;
+                    apsp_g2[i][j] = apsp_g2[i][node] + 1;
+                }
         }
-      }
     }
-
+*/
 
     // atleast one mapping clauses: O(n1*n2)
     for(int i=0;i<n1;i++)
     {
-        for(int j : domain[i])
+        for(int &j : domain[i])
             ans += to_string(mp[{i, j}]) + " ";
         ans += "0\n"; noc++;
     }
@@ -166,53 +162,97 @@ int main(int argc, char const *argv[])
             int p, q;
             if(domain[i].size() <= domain[j].size()) p = i, q = j;
             else p = j, q = i;
-            for(int l : domain[p])
+            for(int &l : domain[p])
                 if(mp[{q, l}]) {
                     ans += to_string(-mp[{p, l}]) + " " + to_string(-mp[{q, l}]) + " 0\n";
                     noc++;
                 }
         }
 
+/*
     //Shortest path clauses O(n1*n1*n2*n2 + n2*(n2+m2))
     for(int i=0; i<n2; ++i){
-      // shortest_path_array = shortest_paths(from i)
-      for(int j=i+1; j<n2; ++j){
-        for(int k=0; k<n1; ++k){
-          for(int l=k+1; l<n1; ++l){
-            if(apsp_g1[k][l] < apsp_g2[i][j] || apsp_g1[l][k] < apsp_g2[j][i]){
-              if(mp[{k, i}] && mp[{l, j}]){
-                ans += to_string(-mp[{k, i}]) + " " + to_string(-mp[{l, j}]) + " 0\n";
-              }
+        // shortest_path_array = shortest_paths(from i)
+        for(int j=i+1; j<n2; ++j){
+            for(int k=0; k<n1; ++k){
+                for(int l=k+1; l<n1; ++l){
+                    if(apsp_g1[k][l] < apsp_g2[i][j] || apsp_g1[l][k] < apsp_g2[j][i])
+                        if(mp[{k, i}] && mp[{l, j}]){
+                            ans += to_string(-mp[{k, i}]) + " " + to_string(-mp[{l, j}]) + " 0\n";
+                            noc++;
+                        }
+                    
+                    if(apsp_g1[k][l] < apsp_g2[j][i] || apsp_g1[l][k] < apsp_g2[i][j])
+                        if(mp[{l, i}] && mp[{k, j}]){
+                            ans += to_string(-mp[{l, i}]) + " " + to_string(-mp[{k, j}]) + " 0\n";
+                            noc++;
+                        }
+                }
             }
-            if(apsp_g1[k][l] < apsp_g2[j][i] || apsp_g1[l][k] < apsp_g2[i][j]){
-              if(mp[{l, i}] && mp[{k, j}]){
-                ans += to_string(-mp[{l, i}]) + " " + to_string(-mp[{k, j}]) + " 0\n";
-              }
-            }
-          }
-
-
         }
+    }
+*/
 
-
-      }
-
-
+    vector<int> not_out_g1[n1], not_out_g2[n2]; // complement graphs
+    bool isPresent[n2]{};
+    // g1 complement: O(n1*n1)
+    for(int i=0;i<n1;i++)
+    {
+        for(int &j : g1_outgoing[i]) isPresent[j] = 1;
+        isPresent[i] = 1;
+        for(int j=0;j<n1;j++) {
+            if(!isPresent[j])
+                not_out_g1[i].pb(j);
+            else
+                isPresent[j] = 0;
+        }   
     }
 
+    // g2 complement: O(n2*n2)
+    for(int i=0;i<n2;i++)
+    {
+        for(int &j : g2_outgoing[i]) isPresent[j] = 1;
+        isPresent[i] = 1;
+        for(int j=0;j<n2;j++) {
+            if(!isPresent[j])
+                not_out_g2[i].pb(j);
+            else
+                isPresent[j] = 0;
+        }   
+    }
 
+    // edges in g1, not in g2 clauses: O(m1*(n2*n2-m2))
+    for(auto &i : e1)
+        for(int &j : domain[i.X]) 
+            for(int &l : not_out_g2[j])
+                if(mp[{i.Y, l}]) {
+                    ans += to_string(-mp[{i.X, j}]) + " " + to_string(-mp[{i.Y, l}]) + " 0\n";
+                    noc++;
+                }
 
+    // edges in g2, not in g1 clauses: O(m2*(n1*n1-m1))
+    for(auto &i : e2)
+        for(int j=0;j<n1;j++) {
+            if(mp[{j, i.X}] == 0) continue;
+            for(int &l : not_out_g1[j])
+                if(mp[{l, i.Y}]) {
+                    ans += to_string(-mp[{j, i.X}]) + " " + to_string(-mp[{l, i.Y}]) + " 0\n";
+                    noc++;
+                }
+        }
+
+/*
     // neighbour clauses: O(n1*n2 + m1*m2)
     for(int i=0;i<n1;i++)
     {
         if(g1_outgoing[i].empty()) continue;
-        for(int j : domain[i])
+        for(int &j : domain[i])
         {
             tmp = to_string(-mp[{i, j}]) + " ";
-            for(int k : g1_outgoing[i])
+            for(int &k : g1_outgoing[i])
             {
                 ans += tmp;
-                for(int l : g2_outgoing[j])
+                for(int &l : g2_outgoing[j])
                     if(mp[{k, l}])
                         ans += to_string(mp[{k, l}]) + " ";
                 ans += "0\n"; noc++;
@@ -224,16 +264,16 @@ int main(int argc, char const *argv[])
     for(int i=0;i<n1;i++)
     {
         bool isPresent[n1]{};
-        for(int j : g1_outgoing[i]) isPresent[j] = 1;
+        for(int &j : g1_outgoing[i]) isPresent[j] = 1;
         isPresent[i] = 1;
         for(int j=0;j<n1;j++)
         {
             if(isPresent[j]) continue;
-            for(int k : domain[i])
+            for(int &k : domain[i])
             {
                 if(g2_outgoing[k].empty()) continue;
                 tmp = to_string(-mp[{i, k}]) + " ";
-                for(int l : g2_outgoing[k])
+                for(int &l : g2_outgoing[k])
                     if(mp[{j, l}]) {
                         ans += tmp + to_string(-mp[{j, l}]) + " 0\n";
                         noc++;
@@ -241,7 +281,7 @@ int main(int argc, char const *argv[])
             }
         }
     }
-
+*/
     ans = "p cnf " + to_string(nov) + " " + to_string(noc) + "\n" + ans;
     sat_input << ans;
     sat_input.close();
