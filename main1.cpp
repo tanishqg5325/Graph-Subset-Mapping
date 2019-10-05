@@ -63,7 +63,7 @@ int main(int argc, char const *argv[])
     ifstream graph_input;
     graph_input.open(file_name + ".graphs");
 
-    graph_input >> u >> v;  //NOTE: Can integers be directly read from file?
+    graph_input >> u >> v;
 
     while(u && v)
     {
@@ -151,7 +151,6 @@ int main(int argc, char const *argv[])
 
     ofstream encoding;
     encoding.open(file_name + ".encoding");
-    // encoding<< n1 << " " << n2 << "\n";
 
     // encoding for each variable
     map<pii, int> mp; bool flag = 1;
@@ -174,7 +173,6 @@ int main(int argc, char const *argv[])
                 domain[i].pb(j);
                 encoding << i+1 << " " << j+1 << " " << nov << "\n";
             }
-        }
         if(domain[i].empty()) {flag = 0; break;}
     }
     encoding.close();
@@ -245,17 +243,18 @@ int main(int argc, char const *argv[])
         }
     }
 */
-
+/*
     vector<int> not_out_g1[n1], not_out_g2[n2]; // complement graphs
     bool isPresent[n2]{};
     // g1 complement: O(n1*n1)
     for(int i=0;i<n1;i++)
     {
         for(int &j : g1_outgoing[i]) isPresent[j] = 1;
-        isPresent[i] = 1;
+        isPresent[i] = 1; int k = 0;
+        not_out_g1[i].resize(n1-1-g1_outgoing[i].size());
         for(int j=0;j<n1;j++) {
             if(!isPresent[j])
-                not_out_g1[i].pb(j);
+                not_out_g1[i][k++] = j;
             else
                 isPresent[j] = 0;
         }
@@ -265,10 +264,11 @@ int main(int argc, char const *argv[])
     for(int i=0;i<n2;i++)
     {
         for(int &j : g2_outgoing[i]) isPresent[j] = 1;
-        isPresent[i] = 1;
+        isPresent[i] = 1; int k = 0;
+        not_out_g2[i].resize(n2-1-g2_outgoing[i].size());
         for(int j=0;j<n2;j++) {
             if(!isPresent[j])
-                not_out_g2[i].pb(j);
+                not_out_g2[i][k++] = j;
             else
                 isPresent[j] = 0;
         }
@@ -293,8 +293,8 @@ int main(int argc, char const *argv[])
                     noc++;
                 }
         }
+*/
 
-/*
     // neighbour clauses: O(n1*n2 + m1*m2)
     for(int i=0;i<n1;i++)
     {
@@ -334,7 +334,118 @@ int main(int argc, char const *argv[])
             }
         }
     }
+
+/*
+    vector<int> not_out_g2[n2]; // complement graphs
+    bool isPresent[n2]{};
+    // g2 complement: O(n2*n2)
+    for(int i=0;i<n2;i++)
+    {
+        for(int &j : g2_outgoing[i]) isPresent[j] = 1;
+        isPresent[i] = 1; int k = 0;
+        not_out_g2[i].resize(n2-1-g2_outgoing[i].size());
+        for(int j=0;j<n2;j++) {
+            if(!isPresent[j])
+                not_out_g2[i][k++] = j;
+            else
+                isPresent[j] = 0;
+        }
+    }
+
+/*
+    // minimize literals
+    for(int i=0;i<n1;i++)
+    {
+        for(int &j : g1_outgoing[i]) isPresent[j] = 1;
+        for(int j=0;j<n1;j++)
+        {
+            if(j == i) continue;
+            if(isPresent[j])
+            {
+                for(int &k : domain[i])
+                {
+                    tmp = to_string(-mp[{i, k}]) + " ";
+                    int l = g2_outgoing[k].size();
+                    if(l + 1 <= 2*(n2-l-1))
+                    {
+                        ans += tmp;
+                        for(int &l : g2_outgoing[k])
+                            if(mp[{j, l}])
+                                ans += to_string(mp[{j, l}]) + " ";
+                        ans += "0\n"; noc++;
+                    }
+                    else
+                    {
+                        for(int &l : not_out_g2[k])
+                            if(mp[{j, l}]) {
+                                ans += tmp + to_string(-mp[{j, l}]) + " 0\n";
+                                noc++;
+                            }
+                    }
+                }
+                isPresent[j] = 0;
+            }
+            else
+            {
+                for(int &k : domain[i])
+                {
+                    tmp = to_string(-mp[{i, k}]) + " ";
+                    int l = g2_outgoing[k].size();
+                    if(n2-l <= 2*l)
+                    {
+                        ans += tmp;
+                        for(int &l : not_out_g2[k])
+                            if(mp[{j, l}])
+                                ans += to_string(mp[{j, l}]) + " ";
+                        ans += "0\n"; noc++;
+                    }
+                    else
+                    {
+                        for(int &l : g2_outgoing[k])
+                            if(mp[{j, l}]) {
+                                ans += tmp + to_string(-mp[{j, l}]) + " 0\n";
+                                noc++;
+                            }
+                    }
+                }
+            }
+        }
+    }
 */
+/*
+    // minimize clauses
+    for(int i=0;i<n1;i++)
+    {
+        for(int &j : g1_outgoing[i]) isPresent[j] = 1;
+        for(int j=0;j<n1;j++)
+        {
+            if(j == i) continue;
+            if(isPresent[j])
+            {
+                for(int &k : domain[i])
+                {
+                    ans += to_string(-mp[{i, k}]) + " ";
+                    for(int &l : g2_outgoing[k])
+                        if(mp[{j, l}])
+                            ans += to_string(mp[{j, l}]) + " ";
+                    ans += "0\n"; noc++;
+                }
+                isPresent[j] = 0;
+            }
+            else
+            {
+                for(int &k : domain[i])
+                {
+                    ans += to_string(-mp[{i, k}]) + " ";
+                    for(int &l : not_out_g2[k])
+                        if(mp[{j, l}])
+                            ans += to_string(mp[{j, l}]) + " ";
+                    ans += "0\n"; noc++;
+                }
+            }
+        }
+    }
+    */
     ans = "p cnf " + to_string(nov) + " " + to_string(noc) + "\n" + ans;
     sat_input << ans;
     sat_input.close();
