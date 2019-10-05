@@ -15,6 +15,40 @@ pii processLine(string line)
     return ans;
 }
 
+void set_apsp_number(vector< vector<int> > &apsp_num_nodes, vector<int> adjacency_list[]){ //apsp_num_nodes[i][j] gives number of nodes reachable from i in maximum k steps
+
+  int cutoff_height = apsp_num_nodes[0].size();
+  int numNodes = apsp_num_nodes.size();
+  for(int i=0; i<numNodes; ++i){
+    // i is the source
+      apsp_num_nodes[i][0] = 1;
+      queue<pii> bfs_queue; //Stores the (vertex, level) pair
+      vector<bool> visited(numNodes, false);
+      bfs_queue.push(pii(i,0));
+      visited[i] = true;
+      int curr_level = 0;
+      while(!bfs_queue.empty() && (curr_level + 1)<cutoff_height){
+          pii node_level_pair = bfs_queue.front();
+          bfs_queue.pop();
+          int node = node_level_pair.X;
+          curr_level = node_level_pair.Y;
+          int new_level = curr_level + 1;
+          for(int &j : adjacency_list[node])
+              if(!visited[j]){
+                  bfs_queue.push(pii(j, new_level));
+                  visited[j] = true;
+                  apsp_num_nodes[i][new_level] += 1;
+              }
+      }
+
+      for(int j=1; j<cutoff_height; ++j){
+        apsp_num_nodes[i][j] += apsp_num_nodes[i][j-1];
+      }
+  }
+}
+
+
+
 int main(int argc, char const *argv[])
 {
     ios_base::sync_with_stdio(false);
@@ -53,6 +87,62 @@ int main(int argc, char const *argv[])
     for(auto &i : e1){ g1_outgoing[i.X].pb(i.Y); g1_incoming[i.Y].pb(i.X); }
     for(auto &i : e2){ g2_outgoing[i.X].pb(i.Y); g2_incoming[i.Y].pb(i.X); }
 
+    vector<vector<int>> apsp_g1(n1, vector<int>(n1, INT_MAX));
+    vector<vector<int>> apsp_g2(n2, vector<int>(n2, INT_MAX));
+
+    vector< vector<int> > g1_num_nodes_arriving(n1, vector<int>(n1, 0));
+    vector< vector<int> > g1_num_nodes_reachable(n1, vector<int>(n1, 0));
+    vector< vector<int> > g2_num_nodes_arriving(n2, vector<int>(n1, 0));  //Size is n1 only, since n1<=n2
+    vector< vector<int> > g2_num_nodes_reachable(n2, vector<int>(n1, 0));
+
+    set_apsp_number(g1_num_nodes_arriving, g1_incoming);
+    set_apsp_number(g2_num_nodes_arriving, g2_incoming);
+    set_apsp_number(g1_num_nodes_reachable, g1_outgoing);
+    set_apsp_number(g2_num_nodes_reachable, g2_outgoing);
+
+    //setting apsp_g1
+
+    // for(int i=0; i<n1; ++i){
+    //   // i is the source
+    //     apsp_g1[i][i] = 0;
+    //     queue<int> bfs_queue;
+    //     vector<bool> visited(n1, false);
+    //     bfs_queue.push(i);
+    //     visited[i] = true;
+    //     while(!bfs_queue.empty()){
+    //         int node = bfs_queue.front();
+    //         bfs_queue.pop();
+    //         for(int &j : g1_outgoing[node])
+    //             if(!visited[j]){
+    //                 bfs_queue.push(j);
+    //                 visited[j] = true;
+    //                 apsp_g1[i][j] = apsp_g1[i][node] + 1;
+    //             }
+    //     }
+    // }
+    //
+    // //setting apsp_g2
+    //
+    // for(int i=0; i<n2; ++i){
+    //   // i is the source
+    //     apsp_g2[i][i] = 0;
+    //     queue<int> bfs_queue;
+    //     vector<bool> visited(n2, false);
+    //     bfs_queue.push(i);
+    //     visited[i] = true;
+    //     while(!bfs_queue.empty()){
+    //         int node = bfs_queue.front();
+    //         bfs_queue.pop();
+    //         for(int &j : g2_outgoing[node])
+    //             if(!visited[j]){
+    //                 bfs_queue.push(j);
+    //                 visited[j] = true;
+    //                 apsp_g2[i][j] = apsp_g2[i][node] + 1;
+    //             }
+    //     }
+    // }
+
+
     ofstream sat_input;
     sat_input.open(file_name + ".satinput");
 
@@ -68,7 +158,17 @@ int main(int argc, char const *argv[])
     for(int i=0;i<n1;i++)
     {
         for(int j=0;j<n2;j++)
-            if(g1_incoming[i].size() <= g2_incoming[j].size() && g1_outgoing[i].size() <= g2_outgoing[j].size()){
+        {
+            bool to_insert_in_domain = true;
+
+            for(int k=1; k<n1; ++k){
+              //Number of nodes arriving with shortest path of length <= k and Number of nodes reachable with shortest path of length <= k
+              if(g1_num_nodes_reachable[i][k] > g2_num_nodes_reachable[j][k] || g1_num_nodes_arriving[i][k] > g2_num_nodes_arriving[j][k]){
+                to_insert_in_domain = false;
+                break;
+              }
+            }
+            if(to_insert_in_domain){
                 mp[{i, j}] = ++nov;
                 domain[i].pb(j);
                 encoding << i+1 << " " << j+1 << " " << nov << "\n";
@@ -86,52 +186,6 @@ int main(int argc, char const *argv[])
         return 0;
     }
 
-/*
-    vector<vector<int>> apsp_g1(n1, vector<int>(n1, INT_MAX));
-    vector<vector<int>> apsp_g2(n2, vector<int>(n2, INT_MAX));
-
-    //setting g1
-
-    for(int i=0; i<n1; ++i){
-      // i is the source
-        apsp_g1[i][i] = 0;
-        queue<int> bfs_queue;
-        vector<bool> visited(n1, false);
-        bfs_queue.push(i);
-        visited[i] = true;
-        while(!bfs_queue.empty()){
-            int node = bfs_queue.front();
-            bfs_queue.pop();
-            for(int &j : g1_outgoing[node])
-                if(!visited[j]){
-                    bfs_queue.push(j);
-                    visited[j] = true;
-                    apsp_g1[i][j] = apsp_g1[i][node] + 1;
-                }
-        }
-    }
-
-    //setting g2
-
-    for(int i=0; i<n2; ++i){
-      // i is the source
-        apsp_g2[i][i] = 0;
-        queue<int> bfs_queue;
-        vector<bool> visited(n2, false);
-        bfs_queue.push(i);
-        visited[i] = true;
-        while(!bfs_queue.empty()){
-            int node = bfs_queue.front();
-            bfs_queue.pop();
-            for(int &j : g2_outgoing[node])
-                if(!visited[j]){
-                    bfs_queue.push(j);
-                    visited[j] = true;
-                    apsp_g2[i][j] = apsp_g2[i][node] + 1;
-                }
-        }
-    }
-*/
 
     // atleast one mapping clauses: O(n1*n2)
     for(int i=0;i<n1;i++)
@@ -178,7 +232,7 @@ int main(int argc, char const *argv[])
                             ans += to_string(-mp[{k, i}]) + " " + to_string(-mp[{l, j}]) + " 0\n";
                             noc++;
                         }
-                    
+
                     if(apsp_g1[k][l] < apsp_g2[j][i] || apsp_g1[l][k] < apsp_g2[i][j])
                         if(mp[{l, i}] && mp[{k, j}]){
                             ans += to_string(-mp[{l, i}]) + " " + to_string(-mp[{k, j}]) + " 0\n";
@@ -203,7 +257,7 @@ int main(int argc, char const *argv[])
                 not_out_g1[i][k++] = j;
             else
                 isPresent[j] = 0;
-        }   
+        }
     }
 
     // g2 complement: O(n2*n2)
@@ -217,12 +271,12 @@ int main(int argc, char const *argv[])
                 not_out_g2[i][k++] = j;
             else
                 isPresent[j] = 0;
-        }   
+        }
     }
 
     // edges in g1, not in g2 clauses: O(m1*(n2*n2-m2))
     for(auto &i : e1)
-        for(int &j : domain[i.X]) 
+        for(int &j : domain[i.X])
             for(int &l : not_out_g2[j])
                 if(mp[{i.Y, l}]) {
                     ans += to_string(-mp[{i.X, j}]) + " " + to_string(-mp[{i.Y, l}]) + " 0\n";
@@ -381,7 +435,7 @@ int main(int argc, char const *argv[])
             else
             {
                 for(int &k : domain[i])
-                { 
+                {
                     ans += to_string(-mp[{i, k}]) + " ";
                     for(int &l : not_out_g2[k])
                         if(mp[{j, l}])
