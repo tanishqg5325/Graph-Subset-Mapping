@@ -87,8 +87,8 @@ int main(int argc, char const *argv[])
     for(auto &i : e1){ g1_outgoing[i.X].pb(i.Y); g1_incoming[i.Y].pb(i.X); }
     for(auto &i : e2){ g2_outgoing[i.X].pb(i.Y); g2_incoming[i.Y].pb(i.X); }
 
-    vector<vector<int>> apsp_g1(n1, vector<int>(n1, INT_MAX));
-    vector<vector<int>> apsp_g2(n2, vector<int>(n2, INT_MAX));
+    // vector<vector<int>> apsp_g1(n1, vector<int>(n1, INT_MAX));
+    // vector<vector<int>> apsp_g2(n2, vector<int>(n2, INT_MAX));
 
     vector< vector<int> > g1_num_nodes_arriving(n1, vector<int>(n1, 0));
     vector< vector<int> > g1_num_nodes_reachable(n1, vector<int>(n1, 0));
@@ -99,6 +99,7 @@ int main(int argc, char const *argv[])
     set_apsp_number(g2_num_nodes_arriving, g2_incoming);
     set_apsp_number(g1_num_nodes_reachable, g1_outgoing);
     set_apsp_number(g2_num_nodes_reachable, g2_outgoing);
+
 
     //setting apsp_g1
 
@@ -173,6 +174,7 @@ int main(int argc, char const *argv[])
                 domain[i].pb(j);
                 encoding << i+1 << " " << j+1 << " " << nov << "\n";
             }
+        }
         if(domain[i].empty()) {flag = 0; break;}
     }
     encoding.close();
@@ -243,7 +245,7 @@ int main(int argc, char const *argv[])
         }
     }
 */
-/*
+
     vector<int> not_out_g1[n1], not_out_g2[n2]; // complement graphs
     bool isPresent[n2]{};
     // g1 complement: O(n1*n1)
@@ -293,8 +295,8 @@ int main(int argc, char const *argv[])
                     noc++;
                 }
         }
-*/
 
+/*
     // neighbour clauses: O(n1*n2 + m1*m2)
     for(int i=0;i<n1;i++)
     {
@@ -334,24 +336,7 @@ int main(int argc, char const *argv[])
             }
         }
     }
-
-/*
-    vector<int> not_out_g2[n2]; // complement graphs
-    bool isPresent[n2]{};
-    // g2 complement: O(n2*n2)
-    for(int i=0;i<n2;i++)
-    {
-        for(int &j : g2_outgoing[i]) isPresent[j] = 1;
-        isPresent[i] = 1; int k = 0;
-        not_out_g2[i].resize(n2-1-g2_outgoing[i].size());
-        for(int j=0;j<n2;j++) {
-            if(!isPresent[j])
-                not_out_g2[i][k++] = j;
-            else
-                isPresent[j] = 0;
-        }
-    }
-
+*/
 /*
     // minimize literals
     for(int i=0;i<n1;i++)
