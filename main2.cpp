@@ -25,9 +25,8 @@ int main(int argc, char const *argv[])
 
     string file_name = argv[1], line;
 
-    ifstream sat_output; ofstream mapping;
-    sat_output.open(file_name + ".satoutput");
-    mapping.open(file_name + ".mapping");
+    ifstream sat_output(file_name + ".satoutput");
+    ofstream mapping(file_name + ".mapping");
 
     sat_output >> line;
     if(line == "UNSAT")
@@ -38,8 +37,7 @@ int main(int argc, char const *argv[])
         return 0;
     }
 
-    ifstream encoding;
-    encoding.open(file_name + ".encoding");
+    ifstream encoding(file_name + ".encoding");
 
     while(getline(encoding, line))
     {
