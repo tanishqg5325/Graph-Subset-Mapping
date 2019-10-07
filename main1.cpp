@@ -1,7 +1,15 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <queue>
+#include <assert.h>
+#include <map>
+
 #define pb push_back
 #define X first
 #define Y second
+
 using namespace std;
 typedef long long ll;
 typedef pair<int,int> pii;
@@ -78,8 +86,8 @@ int main(int argc, char const *argv[])
         e1.pb({e.X-1, e.Y-1});
         n1 = max(n1, max(e.X, e.Y));
     }
-
     graph_input.close();
+
     ofstream sat_input(file_name + ".satinput");
     int m1 = e1.size(), m2 = e2.size(), max1 = n1*(n1-1), max2 = n2*(n2-1);
 
@@ -208,14 +216,14 @@ int main(int argc, char const *argv[])
     }
 
     // non-neighbour clauses: O(n1*n1*(n2+m2))
+    bool isPresent[n1]{};
     for(int i=0;i<n1;i++)
     {
-        bool isPresent[n1]{};
         for(int &j : g1_outgoing[i]) isPresent[j] = 1;
         isPresent[i] = 1;
         for(int j=0;j<n1;j++)
         {
-            if(isPresent[j]) continue;
+            if(isPresent[j]) {isPresent[j] = 0; continue;}
             for(int &k : domain[i])
             {
                 if(g2_outgoing[k].empty()) continue;
