@@ -47,8 +47,6 @@ void set_apsp_number(vector< vector<int> > &apsp_num_nodes, vector<int> adjacenc
   }
 }
 
-
-
 int main(int argc, char const *argv[])
 {
     ios_base::sync_with_stdio(false);
@@ -82,13 +80,32 @@ int main(int argc, char const *argv[])
     }
 
     graph_input.close();
+    ofstream sat_input(file_name + ".satinput");
+    int m1 = e1.size(), m2 = e2.size(), max1 = n1*(n1-1), max2 = n2*(n2-1);
+
+    if(n1 > n2 || m1 > m2 || (m2 == max2 && m1 < max1))
+    {
+        sat_input << "p cnf 1 2\n";
+        sat_input << "1 0\n";
+        sat_input << "-1 0\n";
+        sat_input.close();
+        return 0;
+    }
+
+    ofstream encoding(file_name + ".encoding");
+    if(m2 == max2 && m1 == max1)
+    {
+        for(int i=1;i<=n1;i++) encoding << i << " " << i << " " << i << "\n";
+        sat_input << "p cnf " << n1 << " " << n1 << "\n";
+        for(int i=1;i<=n1;i++) sat_input << i << " " << "0\n";
+        encoding.close();
+        sat_input.close();
+        return 0; 
+    }
 
     vector<int> g1_incoming[n1], g1_outgoing[n1], g2_incoming[n2], g2_outgoing[n2];     // Incoming and Outgoing adjacency lists of g1 and g2
     for(auto &i : e1){ g1_outgoing[i.X].pb(i.Y); g1_incoming[i.Y].pb(i.X); }
     for(auto &i : e2){ g2_outgoing[i.X].pb(i.Y); g2_incoming[i.Y].pb(i.X); }
-
-    // vector<vector<int>> apsp_g1(n1, vector<int>(n1, INT_MAX));
-    // vector<vector<int>> apsp_g2(n2, vector<int>(n2, INT_MAX));
 
     vector< vector<int> > g1_num_nodes_arriving(n1, vector<int>(n1, 0));
     vector< vector<int> > g1_num_nodes_reachable(n1, vector<int>(n1, 0));
@@ -100,67 +117,18 @@ int main(int argc, char const *argv[])
     set_apsp_number(g1_num_nodes_reachable, g1_outgoing);
     set_apsp_number(g2_num_nodes_reachable, g2_outgoing);
 
-
-    //setting apsp_g1
-
-    // for(int i=0; i<n1; ++i){
-    //   // i is the source
-    //     apsp_g1[i][i] = 0;
-    //     queue<int> bfs_queue;
-    //     vector<bool> visited(n1, false);
-    //     bfs_queue.push(i);
-    //     visited[i] = true;
-    //     while(!bfs_queue.empty()){
-    //         int node = bfs_queue.front();
-    //         bfs_queue.pop();
-    //         for(int &j : g1_outgoing[node])
-    //             if(!visited[j]){
-    //                 bfs_queue.push(j);
-    //                 visited[j] = true;
-    //                 apsp_g1[i][j] = apsp_g1[i][node] + 1;
-    //             }
-    //     }
-    // }
-    //
-    // //setting apsp_g2
-    //
-    // for(int i=0; i<n2; ++i){
-    //   // i is the source
-    //     apsp_g2[i][i] = 0;
-    //     queue<int> bfs_queue;
-    //     vector<bool> visited(n2, false);
-    //     bfs_queue.push(i);
-    //     visited[i] = true;
-    //     while(!bfs_queue.empty()){
-    //         int node = bfs_queue.front();
-    //         bfs_queue.pop();
-    //         for(int &j : g2_outgoing[node])
-    //             if(!visited[j]){
-    //                 bfs_queue.push(j);
-    //                 visited[j] = true;
-    //                 apsp_g2[i][j] = apsp_g2[i][node] + 1;
-    //             }
-    //     }
-    // }
-
-
-    ofstream sat_input;
-    sat_input.open(file_name + ".satinput");
-
     string ans = "", tmp;
     int nov = 0, noc = 0; // nov = number of variables, noc = number of clauses
 
-    ofstream encoding;
-    encoding.open(file_name + ".encoding");
-
     // encoding for each variable
-    map<pii, int> mp; bool flag = 1;
+    map<pii, int> mp; bool flag = 1, to_insert_in_domain;
     vector<int> domain[n1];
+    
     for(int i=0;i<n1;i++)
     {
         for(int j=0;j<n2;j++)
         {
-            bool to_insert_in_domain = true;
+            to_insert_in_domain = true;
 
             for(int k=1; k<n1; ++k){
               //Number of nodes arriving with shortest path of length <= k and Number of nodes reachable with shortest path of length <= k
@@ -179,7 +147,7 @@ int main(int argc, char const *argv[])
     }
     encoding.close();
 
-    if(n1 > n2 || flag == 0)
+    if(flag == 0)
     {
         sat_input << "p cnf 1 2\n";
         sat_input << "1 0\n";
@@ -187,7 +155,6 @@ int main(int argc, char const *argv[])
         sat_input.close();
         return 0;
     }
-
 
     // atleast one mapping clauses: O(n1*n2)
     for(int i=0;i<n1;i++)
@@ -222,81 +189,6 @@ int main(int argc, char const *argv[])
                 }
         }
 
-/*
-    //Shortest path clauses O(n1*n1*n2*n2 + n2*(n2+m2))
-    for(int i=0; i<n2; ++i){
-        // shortest_path_array = shortest_paths(from i)
-        for(int j=i+1; j<n2; ++j){
-            for(int k=0; k<n1; ++k){
-                for(int l=k+1; l<n1; ++l){
-                    if(apsp_g1[k][l] < apsp_g2[i][j] || apsp_g1[l][k] < apsp_g2[j][i])
-                        if(mp[{k, i}] && mp[{l, j}]){
-                            ans += to_string(-mp[{k, i}]) + " " + to_string(-mp[{l, j}]) + " 0\n";
-                            noc++;
-                        }
-
-                    if(apsp_g1[k][l] < apsp_g2[j][i] || apsp_g1[l][k] < apsp_g2[i][j])
-                        if(mp[{l, i}] && mp[{k, j}]){
-                            ans += to_string(-mp[{l, i}]) + " " + to_string(-mp[{k, j}]) + " 0\n";
-                            noc++;
-                        }
-                }
-            }
-        }
-    }
-*/
-
-    vector<int> not_out_g1[n1], not_out_g2[n2]; // complement graphs
-    bool isPresent[n2]{};
-    // g1 complement: O(n1*n1)
-    for(int i=0;i<n1;i++)
-    {
-        for(int &j : g1_outgoing[i]) isPresent[j] = 1;
-        isPresent[i] = 1; int k = 0;
-        not_out_g1[i].resize(n1-1-g1_outgoing[i].size());
-        for(int j=0;j<n1;j++) {
-            if(!isPresent[j])
-                not_out_g1[i][k++] = j;
-            else
-                isPresent[j] = 0;
-        }
-    }
-
-    // g2 complement: O(n2*n2)
-    for(int i=0;i<n2;i++)
-    {
-        for(int &j : g2_outgoing[i]) isPresent[j] = 1;
-        isPresent[i] = 1; int k = 0;
-        not_out_g2[i].resize(n2-1-g2_outgoing[i].size());
-        for(int j=0;j<n2;j++) {
-            if(!isPresent[j])
-                not_out_g2[i][k++] = j;
-            else
-                isPresent[j] = 0;
-        }
-    }
-
-    // edges in g1, not in g2 clauses: O(m1*(n2*n2-m2))
-    for(auto &i : e1)
-        for(int &j : domain[i.X])
-            for(int &l : not_out_g2[j])
-                if(mp[{i.Y, l}]) {
-                    ans += to_string(-mp[{i.X, j}]) + " " + to_string(-mp[{i.Y, l}]) + " 0\n";
-                    noc++;
-                }
-
-    // edges in g2, not in g1 clauses: O(m2*(n1*n1-m1))
-    for(auto &i : e2)
-        for(int j=0;j<n1;j++) {
-            if(mp[{j, i.X}] == 0) continue;
-            for(int &l : not_out_g1[j])
-                if(mp[{l, i.Y}]) {
-                    ans += to_string(-mp[{j, i.X}]) + " " + to_string(-mp[{l, i.Y}]) + " 0\n";
-                    noc++;
-                }
-        }
-
-/*
     // neighbour clauses: O(n1*n2 + m1*m2)
     for(int i=0;i<n1;i++)
     {
@@ -336,101 +228,7 @@ int main(int argc, char const *argv[])
             }
         }
     }
-*/
-/*
-    // minimize literals
-    for(int i=0;i<n1;i++)
-    {
-        for(int &j : g1_outgoing[i]) isPresent[j] = 1;
-        for(int j=0;j<n1;j++)
-        {
-            if(j == i) continue;
-            if(isPresent[j])
-            {
-                for(int &k : domain[i])
-                {
-                    tmp = to_string(-mp[{i, k}]) + " ";
-                    int l = g2_outgoing[k].size();
-                    if(l + 1 <= 2*(n2-l-1))
-                    {
-                        ans += tmp;
-                        for(int &l : g2_outgoing[k])
-                            if(mp[{j, l}])
-                                ans += to_string(mp[{j, l}]) + " ";
-                        ans += "0\n"; noc++;
-                    }
-                    else
-                    {
-                        for(int &l : not_out_g2[k])
-                            if(mp[{j, l}]) {
-                                ans += tmp + to_string(-mp[{j, l}]) + " 0\n";
-                                noc++;
-                            }
-                    }
-                }
-                isPresent[j] = 0;
-            }
-            else
-            {
-                for(int &k : domain[i])
-                {
-                    tmp = to_string(-mp[{i, k}]) + " ";
-                    int l = g2_outgoing[k].size();
-                    if(n2-l <= 2*l)
-                    {
-                        ans += tmp;
-                        for(int &l : not_out_g2[k])
-                            if(mp[{j, l}])
-                                ans += to_string(mp[{j, l}]) + " ";
-                        ans += "0\n"; noc++;
-                    }
-                    else
-                    {
-                        for(int &l : g2_outgoing[k])
-                            if(mp[{j, l}]) {
-                                ans += tmp + to_string(-mp[{j, l}]) + " 0\n";
-                                noc++;
-                            }
-                    }
-                }
-            }
-        }
-    }
-*/
-/*
-    // minimize clauses
-    for(int i=0;i<n1;i++)
-    {
-        for(int &j : g1_outgoing[i]) isPresent[j] = 1;
-        for(int j=0;j<n1;j++)
-        {
-            if(j == i) continue;
-            if(isPresent[j])
-            {
-                for(int &k : domain[i])
-                {
-                    ans += to_string(-mp[{i, k}]) + " ";
-                    for(int &l : g2_outgoing[k])
-                        if(mp[{j, l}])
-                            ans += to_string(mp[{j, l}]) + " ";
-                    ans += "0\n"; noc++;
-                }
-                isPresent[j] = 0;
-            }
-            else
-            {
-                for(int &k : domain[i])
-                {
-                    ans += to_string(-mp[{i, k}]) + " ";
-                    for(int &l : not_out_g2[k])
-                        if(mp[{j, l}])
-                            ans += to_string(mp[{j, l}]) + " ";
-                    ans += "0\n"; noc++;
-                }
-            }
-        }
-    }
-    */
+
     ans = "p cnf " + to_string(nov) + " " + to_string(noc) + "\n" + ans;
     sat_input << ans;
     sat_input.close();
