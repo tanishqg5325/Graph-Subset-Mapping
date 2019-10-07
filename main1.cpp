@@ -131,11 +131,34 @@ int main(int argc, char const *argv[])
     // encoding for each variable
     map<pii, int> mp; bool flag = 1, to_insert_in_domain;
     vector<int> domain[n1];
+
+    vector<int> g2_isolated;
+    for(int i=0;i<n2;i++)
+        if(g2_incoming[i].empty() && g2_outgoing[i].empty())
+            g2_isolated.pb(i);
+
+    int g1_isolated_mapping[n1], k = 0; bool isAlreadyMapped[n2]{};
+    for(int i=0;i<n1;i++)
+    {
+        if(g1_outgoing[i].empty() && g1_incoming[i].empty() && k < g2_isolated.size()) {
+            isAlreadyMapped[g2_isolated[k]] = true;
+            g1_isolated_mapping[i] = g2_isolated[k++];
+        }
+        else
+            g1_isolated_mapping[i] = -1;
+    }
     
     for(int i=0;i<n1;i++)
     {
+        if(g1_isolated_mapping[i] != -1)
+        {
+            mp[{i, g1_isolated_mapping[i]}] = ++nov;
+            encoding << i+1 << " " << g1_isolated_mapping[i]+1 << " " << nov << "\n";
+            continue; 
+        }
         for(int j=0;j<n2;j++)
         {
+            if(isAlreadyMapped[j]) continue;
             to_insert_in_domain = true;
 
             for(int k=1; k<n1; ++k){
@@ -164,9 +187,14 @@ int main(int argc, char const *argv[])
         return 0;
     }
 
+    for(int i=0;i<n1;i++)
+        if(g1_isolated_mapping[i] != -1)
+            ans += to_string(mp[{i, g1_isolated_mapping[i]}]) + " 0\n";
+
     // atleast one mapping clauses: O(n1*n2)
     for(int i=0;i<n1;i++)
     {
+        if(g1_isolated_mapping[i] != -1) continue;
         for(int &j : domain[i])
             ans += to_string(mp[{i, j}]) + " ";
         ans += "0\n"; noc++;
@@ -175,6 +203,7 @@ int main(int argc, char const *argv[])
     // exactly one mapping clauses: O(n1*n2*n2)
     for(int i=0;i<n1;i++)
     {
+        if(g1_isolated_mapping[i] != -1) continue;
         int l = domain[i].size();
         for(int j=0;j<l;j++)
             for(int k=j+1;k<l;k++) {
@@ -185,8 +214,11 @@ int main(int argc, char const *argv[])
 
     // one-one mapping: O(n1*n1*n2)
     for(int i=0;i<n1;i++)
+    {
+        if(g1_isolated_mapping[i] != -1) continue;
         for(int j=i+1;j<n1;j++)
         {
+            if(g1_isolated_mapping[j] != -1) continue;
             int p, q;
             if(domain[i].size() <= domain[j].size()) p = i, q = j;
             else p = j, q = i;
@@ -196,11 +228,13 @@ int main(int argc, char const *argv[])
                     noc++;
                 }
         }
+    }
 
     // neighbour clauses: O(n1*n2 + m1*m2)
     for(int i=0;i<n1;i++)
     {
         if(g1_outgoing[i].empty()) continue;
+        if(g1_isolated_mapping[i] != -1) continue;
         for(int &j : domain[i])
         {
             tmp = to_string(-mp[{i, j}]) + " ";
@@ -219,11 +253,13 @@ int main(int argc, char const *argv[])
     bool isPresent[n1]{};
     for(int i=0;i<n1;i++)
     {
+        if(g1_isolated_mapping[i] != -1) continue;
         for(int &j : g1_outgoing[i]) isPresent[j] = 1;
         isPresent[i] = 1;
         for(int j=0;j<n1;j++)
         {
             if(isPresent[j]) {isPresent[j] = 0; continue;}
+            if(g1_isolated_mapping[j] != -1) continue;
             for(int &k : domain[i])
             {
                 if(g2_outgoing[k].empty()) continue;
