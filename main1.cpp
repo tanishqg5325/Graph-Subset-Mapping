@@ -59,7 +59,7 @@ int set_apsp_number(vector< vector<int> > &apsp_num_nodes, vector<int> adjacency
         }
       }
 
-      if(!apsp_num_nodes[i][cutoff_height-1]){
+      if(apsp_num_nodes[i][cutoff_height-1]){
         max_height_reached = max(max_height_reached, cutoff_height);
       }
   }
@@ -124,20 +124,31 @@ int main(int argc, char const *argv[])
     }
 
     vector<int> g1_incoming[n1], g1_outgoing[n1], g2_incoming[n2], g2_outgoing[n2];     // Incoming and Outgoing adjacency lists of g1 and g2
-    for(auto &i : e1){ g1_outgoing[i.X].pb(i.Y); g1_incoming[i.Y].pb(i.X); }
-    for(auto &i : e2){ g2_outgoing[i.X].pb(i.Y); g2_incoming[i.Y].pb(i.X); }
+    vector<int> g1_undirected[n1], g2_undirected[n2]; //Undirected adjacency lists
+    for(auto &i : e1){ g1_outgoing[i.X].pb(i.Y); g1_incoming[i.Y].pb(i.X); g1_undirected[i.X].pb(i.Y); g1_undirected[i.Y].pb(i.X);}
+    for(auto &i : e2){ g2_outgoing[i.X].pb(i.Y); g2_incoming[i.Y].pb(i.X); g2_undirected[i.X].pb(i.Y); g2_undirected[i.Y].pb(i.X);}
 
     vector< vector<int> > g1_num_nodes_arriving(n1, vector<int>(n1, 0));
     vector< vector<int> > g1_num_nodes_reachable(n1, vector<int>(n1, 0));
     vector< vector<int> > g2_num_nodes_arriving(n2, vector<int>(n1, 0));  //Size is n1 only, since n1<=n2
     vector< vector<int> > g2_num_nodes_reachable(n2, vector<int>(n1, 0));
 
+    vector< vector<int> > g1_num_nodes_undirected(n1, vector<int>(n1, 0));  //Size is n1 only, since n1<=n2
+    vector< vector<int> > g2_num_nodes_undirected(n2, vector<int>(n1, 0));
+
+
     int arriving_cutoff_height = set_apsp_number(g1_num_nodes_arriving, g1_incoming, n1);
     int reachable_cutoff_height = set_apsp_number(g1_num_nodes_reachable, g1_outgoing, n1);
     set_apsp_number(g2_num_nodes_arriving, g2_incoming, arriving_cutoff_height);
     set_apsp_number(g2_num_nodes_reachable, g2_outgoing, reachable_cutoff_height);
 
+
+
+    int undirected_cutoff_height = set_apsp_number(g1_num_nodes_undirected, g1_undirected, n1);
+    set_apsp_number(g2_num_nodes_undirected, g2_undirected, undirected_cutoff_height);
     //If g1_num_nodes[i][j] = 0, it means that height cant be reachable
+
+
 
     string ans = "", tmp;
     int nov = 0, noc = 0; // nov = number of variables, noc = number of clauses
@@ -162,6 +173,8 @@ int main(int argc, char const *argv[])
             g1_isolated_mapping[i] = -1;
     }
 
+//
+
     for(int i=0;i<n1;i++)
     {
         if(g1_isolated_mapping[i] != -1)
@@ -177,10 +190,13 @@ int main(int argc, char const *argv[])
 
             for(int k=1; k<n1; ++k){
               //Number of nodes arriving with shortest path of length <= k and Number of nodes reachable with shortest path of length <= k
-              if(g1_num_nodes_reachable[i][k] == 0 && g1_num_nodes_arriving[i][k] == 0){  //Limiting height reached, no use to search further
+              bool to_break = g1_num_nodes_reachable[i][k] == 0 && g1_num_nodes_arriving[i][k] == 0 && g1_num_nodes_undirected[i][k] == 0;
+              if(to_break){  //Limiting height reached, no use to search further
                 break;
               }
-              if(g1_num_nodes_reachable[i][k] > g2_num_nodes_reachable[j][k] || g1_num_nodes_arriving[i][k] > g2_num_nodes_arriving[j][k]){
+              bool to_break_without_insertion =
+                g1_num_nodes_reachable[i][k] > g2_num_nodes_reachable[j][k] || g1_num_nodes_arriving[i][k] > g2_num_nodes_arriving[j][k] || g1_num_nodes_undirected[i][k] > g2_num_nodes_undirected[j][k];
+              if(to_break_without_insertion){
                 to_insert_in_domain = false;
                 break;
               }
