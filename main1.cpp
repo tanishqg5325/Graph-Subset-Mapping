@@ -50,7 +50,12 @@ void set_apsp_number(vector< vector<int> > &apsp_num_nodes, vector<int> adjacenc
       }
 
       for(int j=1; j<cutoff_height; ++j){
-        apsp_num_nodes[i][j] += apsp_num_nodes[i][j-1];
+        if(apsp_num_nodes[i][j]){
+          apsp_num_nodes[i][j] += apsp_num_nodes[i][j-1];
+        }
+        else{
+          break;
+        }
       }
   }
 }
@@ -108,7 +113,7 @@ int main(int argc, char const *argv[])
         for(int i=1;i<=n1;i++) sat_input << i << " " << "0\n";
         encoding.close();
         sat_input.close();
-        return 0; 
+        return 0;
     }
 
     vector<int> g1_incoming[n1], g1_outgoing[n1], g2_incoming[n2], g2_outgoing[n2];     // Incoming and Outgoing adjacency lists of g1 and g2
@@ -124,6 +129,8 @@ int main(int argc, char const *argv[])
     set_apsp_number(g2_num_nodes_arriving, g2_incoming);
     set_apsp_number(g1_num_nodes_reachable, g1_outgoing);
     set_apsp_number(g2_num_nodes_reachable, g2_outgoing);
+
+    //If g1_num_nodes[i][j] = 0, it means that height cant be reachable
 
     string ans = "", tmp;
     int nov = 0, noc = 0; // nov = number of variables, noc = number of clauses
@@ -147,14 +154,14 @@ int main(int argc, char const *argv[])
         else
             g1_isolated_mapping[i] = -1;
     }
-    
+
     for(int i=0;i<n1;i++)
     {
         if(g1_isolated_mapping[i] != -1)
         {
             mp[{i, g1_isolated_mapping[i]}] = ++nov;
             encoding << i+1 << " " << g1_isolated_mapping[i]+1 << " " << nov << "\n";
-            continue; 
+            continue;
         }
         for(int j=0;j<n2;j++)
         {
@@ -163,6 +170,9 @@ int main(int argc, char const *argv[])
 
             for(int k=1; k<n1; ++k){
               //Number of nodes arriving with shortest path of length <= k and Number of nodes reachable with shortest path of length <= k
+              if(g1_num_nodes_reachable[i][k] == 0 && g1_num_nodes_arriving[i][k] == 0){  //Limiting height reached, no use to search further
+                break;
+              }
               if(g1_num_nodes_reachable[i][k] > g2_num_nodes_reachable[j][k] || g1_num_nodes_arriving[i][k] > g2_num_nodes_arriving[j][k]){
                 to_insert_in_domain = false;
                 break;
