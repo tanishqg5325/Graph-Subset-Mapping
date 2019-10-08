@@ -23,9 +23,9 @@ pii processLine(string line)
     return ans;
 }
 
-void set_apsp_number(vector< vector<int> > &apsp_num_nodes, vector<int> adjacency_list[]){ //apsp_num_nodes[i][j] gives number of nodes reachable from i in maximum k steps
-
-  int cutoff_height = apsp_num_nodes[0].size();
+//Returns the maximum height reached in bfs
+int set_apsp_number(vector< vector<int> > &apsp_num_nodes, vector<int> adjacency_list[], int cutoff_height){ //apsp_num_nodes[i][j] gives number of nodes reachable from i in maximum k steps
+  int max_height_reached = 0;
   int numNodes = apsp_num_nodes.size();
   for(int i=0; i<numNodes; ++i){
     // i is the source
@@ -54,10 +54,17 @@ void set_apsp_number(vector< vector<int> > &apsp_num_nodes, vector<int> adjacenc
           apsp_num_nodes[i][j] += apsp_num_nodes[i][j-1];
         }
         else{
+          max_height_reached = max(max_height_reached, j);
           break;
         }
       }
+
+      if(!apsp_num_nodes[i][cutoff_height-1]){
+        max_height_reached = max(max_height_reached, cutoff_height);
+      }
   }
+
+  return max_height_reached;
 }
 
 int main(int argc, char const *argv[])
@@ -125,10 +132,10 @@ int main(int argc, char const *argv[])
     vector< vector<int> > g2_num_nodes_arriving(n2, vector<int>(n1, 0));  //Size is n1 only, since n1<=n2
     vector< vector<int> > g2_num_nodes_reachable(n2, vector<int>(n1, 0));
 
-    set_apsp_number(g1_num_nodes_arriving, g1_incoming);
-    set_apsp_number(g2_num_nodes_arriving, g2_incoming);
-    set_apsp_number(g1_num_nodes_reachable, g1_outgoing);
-    set_apsp_number(g2_num_nodes_reachable, g2_outgoing);
+    int arriving_cutoff_height = set_apsp_number(g1_num_nodes_arriving, g1_incoming, n1);
+    int reachable_cutoff_height = set_apsp_number(g1_num_nodes_reachable, g1_outgoing, n1);
+    set_apsp_number(g2_num_nodes_arriving, g2_incoming, arriving_cutoff_height);
+    set_apsp_number(g2_num_nodes_reachable, g2_outgoing, reachable_cutoff_height);
 
     //If g1_num_nodes[i][j] = 0, it means that height cant be reachable
 
