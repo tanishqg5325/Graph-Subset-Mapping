@@ -24,7 +24,8 @@ pii processLine(string line)
 }
 
 //Returns the maximum height reached in bfs
-int set_apsp_number(vector< vector<int> > &apsp_num_nodes, vector<int> adjacency_list[], int cutoff_height){ //apsp_num_nodes[i][j] gives number of nodes reachable from i in maximum k steps
+int set_apsp_number(vector< vector<int> > &apsp_num_nodes, vector<int> adjacency_list[], vector< map<int,int> > &cycle_counter, int cutoff_height){ 
+    //apsp_num_nodes[i][j] gives number of nodes reachable from i in maximum k steps
   int max_height_reached = 0;
   int numNodes = apsp_num_nodes.size();
   for(int i=0; i<numNodes; ++i){
@@ -46,6 +47,11 @@ int set_apsp_number(vector< vector<int> > &apsp_num_nodes, vector<int> adjacency
                   bfs_queue.push(pii(j, new_level));
                   visited[j] = true;
                   apsp_num_nodes[i][new_level] += 1;
+              }
+              else{
+                  //Vertex is visited
+                  if(j == i)
+                    ++cycle_counter[i][new_level];
               }
       }
 
@@ -125,7 +131,7 @@ int main(int argc, char const *argv[])
 
     vector<int> g1_incoming[n1], g1_outgoing[n1], g2_incoming[n2], g2_outgoing[n2];     // Incoming and Outgoing adjacency lists of g1 and g2
     vector<int> g1_undirected[n1], g2_undirected[n2]; //Undirected adjacency lists
-    for(auto &i : e1){ g1_outgoing[i.X].pb(i.Y); g1_incoming[i.Y].pb(i.X); g1_undirected[i.X].pb(i.Y); g1_undirected[i.Y].pb(i.X);}
+    for(auto &i : e1){ g1_outgoing[i.X].pb(i.Y); g1_incoming[i.Y].pb(i.X); g1_undirected[i.X].pb(i.Y); g1_undirected[i.Y].pb(i.X);}//NOTE: How to ensure same edge doesnt come twice in undirected graph?
     for(auto &i : e2){ g2_outgoing[i.X].pb(i.Y); g2_incoming[i.Y].pb(i.X); g2_undirected[i.X].pb(i.Y); g2_undirected[i.Y].pb(i.X);}
 
     vector< vector<int> > g1_num_nodes_arriving(n1, vector<int>(n1, 0));
@@ -136,16 +142,25 @@ int main(int argc, char const *argv[])
     vector< vector<int> > g1_num_nodes_undirected(n1, vector<int>(n1, 0));  //Size is n1 only, since n1<=n2
     vector< vector<int> > g2_num_nodes_undirected(n2, vector<int>(n1, 0));
 
+    //For checking directed cycles
+    vector< map<int,int> > g1_num_cycles_directed_normal(n1); //Map for storing (cycle_length, number of cycles) pair
+    vector< map<int,int> > g2_num_cycles_directed_normal(n2);
+    vector< map<int,int> > g1_num_cycles_directed_reversed(n1);
+    vector< map<int,int> > g2_num_cycles_directed_reversed(n2);
 
-    int arriving_cutoff_height = set_apsp_number(g1_num_nodes_arriving, g1_incoming, n1);
-    int reachable_cutoff_height = set_apsp_number(g1_num_nodes_reachable, g1_outgoing, n1);
-    set_apsp_number(g2_num_nodes_arriving, g2_incoming, arriving_cutoff_height);
-    set_apsp_number(g2_num_nodes_reachable, g2_outgoing, reachable_cutoff_height);
+    //For checking undirected cycles
+    vector< map<int,int> > g1_num_cycles_undirected(n1);
+    vector< map<int,int> > g2_num_cycles_undirected(n2);
+
+    int arriving_cutoff_height = set_apsp_number(g1_num_nodes_arriving, g1_incoming, g1_num_cycles_directed_reversed, n1);
+    int reachable_cutoff_height = set_apsp_number(g1_num_nodes_reachable, g1_outgoing, g1_num_cycles_directed_normal, n1);
+    set_apsp_number(g2_num_nodes_arriving, g2_incoming, g2_num_cycles_directed_reversed, arriving_cutoff_height);
+    set_apsp_number(g2_num_nodes_reachable, g2_outgoing, g2_num_cycles_directed_normal, reachable_cutoff_height);
 
 
 
-    int undirected_cutoff_height = set_apsp_number(g1_num_nodes_undirected, g1_undirected, n1);
-    set_apsp_number(g2_num_nodes_undirected, g2_undirected, undirected_cutoff_height);
+    int undirected_cutoff_height = set_apsp_number(g1_num_nodes_undirected, g1_undirected, g1_num_cycles_undirected, n1);
+    set_apsp_number(g2_num_nodes_undirected, g2_undirected, g2_num_cycles_undirected, undirected_cutoff_height);
     //If g1_num_nodes[i][j] = 0, it means that height cant be reachable
 
 
@@ -173,7 +188,7 @@ int main(int argc, char const *argv[])
             g1_isolated_mapping[i] = -1;
     }
 
-//
+
 
     for(int i=0;i<n1;i++)
     {
@@ -188,19 +203,55 @@ int main(int argc, char const *argv[])
             if(isAlreadyMapped[j]) continue;
             to_insert_in_domain = true;
 
-            for(int k=1; k<n1; ++k){
-              //Number of nodes arriving with shortest path of length <= k and Number of nodes reachable with shortest path of length <= k
-              bool to_break = g1_num_nodes_reachable[i][k] == 0 && g1_num_nodes_arriving[i][k] == 0 && g1_num_nodes_undirected[i][k] == 0;
-              if(to_break){  //Limiting height reached, no use to search further
-                break;
-              }
-              bool to_break_without_insertion =
-                g1_num_nodes_reachable[i][k] > g2_num_nodes_reachable[j][k] || g1_num_nodes_arriving[i][k] > g2_num_nodes_arriving[j][k] || g1_num_nodes_undirected[i][k] > g2_num_nodes_undirected[j][k];
-              if(to_break_without_insertion){
-                to_insert_in_domain = false;
-                break;
-              }
+            // Checking for directed cycle lengths in normal graph
+            for(auto k : g1_num_cycles_directed_normal[i]){
+                if (g2_num_cycles_directed_normal[j][k.X] < k.Y){
+                    // cout<<k.Y<<endl;
+                    to_insert_in_domain = false;
+                    break;
+                }
             }
+
+            //Checking for directed cycle lengths in reverse graph
+            if(to_insert_in_domain){
+                for(auto k : g1_num_cycles_directed_reversed[i]){
+                    if (g2_num_cycles_directed_reversed[j][k.X] < k.Y){
+                        // cout<<k.Y<<endl;
+                        to_insert_in_domain = false;
+                        break;
+                    }
+                }
+            }
+
+            // Checking for directed cycle lengths in undirected graph
+            if(to_insert_in_domain){
+                for(auto k : g1_num_cycles_undirected[i]){
+                    if (g2_num_cycles_undirected[j][k.X] < k.Y){
+                        cout<<i<<" "<<j<<" "<<k.Y<<" "<< g2_num_cycles_undirected[j][k.X]<<endl;
+                        to_insert_in_domain = false;
+                        break;
+                    }
+                }
+            }
+
+
+            //Checking for All Pair Shortest Path Lengths
+            if(to_insert_in_domain){
+                for(int k=1; k<n1; ++k){
+                //Number of nodes arriving with shortest path of length <= k and Number of nodes reachable with shortest path of length <= k
+                bool to_break = g1_num_nodes_reachable[i][k] == 0 && g1_num_nodes_arriving[i][k] == 0 && g1_num_nodes_undirected[i][k] == 0;
+                if(to_break){  //Limiting height reached, no use to search further
+                    break;
+                }
+                bool to_break_without_insertion =
+                    g1_num_nodes_reachable[i][k] > g2_num_nodes_reachable[j][k] || g1_num_nodes_arriving[i][k] > g2_num_nodes_arriving[j][k] || g1_num_nodes_undirected[i][k] > g2_num_nodes_undirected[j][k];
+                if(to_break_without_insertion){
+                    to_insert_in_domain = false;
+                    break;
+                }
+                }
+            }
+
             if(to_insert_in_domain){
                 mp[{i, j}] = ++nov;
                 domain[i].pb(j);
