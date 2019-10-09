@@ -5,7 +5,6 @@
 #include <queue>
 #include <assert.h>
 #include <map>
-#include <set>
 
 #define pb push_back
 #define X first
@@ -121,7 +120,7 @@ int main(int argc, char const *argv[])
     {
         for(int i=1;i<=n1;i++) encoding << i << " " << i << " " << i << "\n";
         sat_input << "p cnf " << n1 << " " << n1 << "\n";
-        for(int i=1;i<=n1;i++) sat_input << i << " " << "0\n";
+        for(int i=1;i<=n1;i++) sat_input << i << " 0\n";
         encoding.close();
         sat_input.close();
         return 0;
@@ -129,22 +128,8 @@ int main(int argc, char const *argv[])
 
     vector<int> g1_incoming[n1], g1_outgoing[n1], g2_incoming[n2], g2_outgoing[n2];     // Incoming and Outgoing adjacency lists of g1 and g2
     vector<int> g1_undirected[n1], g2_undirected[n2]; //Undirected adjacency lists
-    for(auto &i : e1){ g1_outgoing[i.X].pb(i.Y); g1_incoming[i.Y].pb(i.X); g1_undirected[i.X].pb(i.Y); g1_undirected[i.Y].pb(i.X);}//NOTE: How to ensure same edge doesnt come twice in undirected graph?
+    for(auto &i : e1){ g1_outgoing[i.X].pb(i.Y); g1_incoming[i.Y].pb(i.X); g1_undirected[i.X].pb(i.Y); g1_undirected[i.Y].pb(i.X);}
     for(auto &i : e2){ g2_outgoing[i.X].pb(i.Y); g2_incoming[i.Y].pb(i.X); g2_undirected[i.X].pb(i.Y); g2_undirected[i.Y].pb(i.X);}
-
-    // for(int i=0;i<n1;i++)
-    // {
-    //     set<int> tmp(g1_undirected[i].begin(), g1_undirected[i].end());
-    //     g1_undirected[i].clear();
-    //     for(int j : tmp) g1_undirected[i].pb(j);
-    // }
-
-    // for(int i=0;i<n2;i++)
-    // {
-    //     set<int> tmp(g2_undirected[i].begin(), g2_undirected[i].end());
-    //     g2_undirected[i].clear();
-    //     for(int j : tmp) g2_undirected[i].pb(j);
-    // }
 
     vector< vector<int> > g1_num_nodes_arriving(n1, vector<int>(n1, 0));
     vector< vector<int> > g1_num_nodes_reachable(n1, vector<int>(n1, 0));
@@ -155,7 +140,7 @@ int main(int argc, char const *argv[])
     vector< vector<int> > g2_num_nodes_undirected(n2, vector<int>(n1, 0));
 
     //For checking directed cycles
-    int g1_cycle_bounds_directed_normal[n1]; //Array for storing (max_cycle_length, min_cycle_length) pair
+    int g1_cycle_bounds_directed_normal[n1]; //Array for storing special min_cycle_length
     int g2_cycle_bounds_directed_normal[n2];
     int g1_cycle_bounds[n1];  // unusable
     int g2_cycle_bounds[n2];  // unusable
@@ -165,14 +150,9 @@ int main(int argc, char const *argv[])
     set_apsp_number(g2_num_nodes_arriving, g2_incoming, g2_cycle_bounds, arriving_cutoff_height);
     set_apsp_number(g2_num_nodes_reachable, g2_outgoing, g2_cycle_bounds_directed_normal, reachable_cutoff_height);
 
-
-
     int undirected_cutoff_height = set_apsp_number(g1_num_nodes_undirected, g1_undirected, g1_cycle_bounds, n1);
     set_apsp_number(g2_num_nodes_undirected, g2_undirected, g2_cycle_bounds, undirected_cutoff_height);
-    //If g1_num_nodes[i][j] = 0, it means that height cant be reachable
-
-
-
+    
     string ans = "", tmp;
     int nov = 0, noc = 0; // nov = number of variables, noc = number of clauses
 
@@ -232,6 +212,7 @@ int main(int argc, char const *argv[])
 
                     bool to_break_without_insertion =
                         (g1_num_nodes_reachable[i][k] > g2_num_nodes_reachable[j][k]) || (g1_num_nodes_arriving[i][k] > g2_num_nodes_arriving[j][k]) || g1_num_nodes_undirected[i][k] > g2_num_nodes_undirected[j][k];
+                    
                     if(to_break_without_insertion){
                         to_insert_in_domain = false;
                         break;
@@ -300,7 +281,7 @@ int main(int argc, char const *argv[])
                 }
         }
     }
-/*
+
     // neighbour clauses: O(n1*n2 + m1*m2)
     for(int i=0;i<n1;i++)
     {
@@ -343,53 +324,6 @@ int main(int argc, char const *argv[])
             }
         }
     }
-*/
-    vector<int> not_out_g1[n1], not_out_g2[n2]; // complement graphs
-    bool isPresent[n2]{};
-    // g1 complement: O(n1*n1)
-    for(int i=0;i<n1;i++)
-    {
-        for(int &j : g1_outgoing[i]) isPresent[j] = 1;
-        isPresent[i] = 1; int k = 0;
-        not_out_g1[i].resize(n1-1-g1_outgoing[i].size());
-        for(int j=0;j<n1;j++) {
-            if(!isPresent[j])
-                not_out_g1[i][k++] = j;
-            else
-                isPresent[j] = 0;
-        }   
-    }
-    // g2 complement: O(n2*n2)
-    for(int i=0;i<n2;i++)
-    {
-        for(int &j : g2_outgoing[i]) isPresent[j] = 1;
-        isPresent[i] = 1; int k = 0;
-        not_out_g2[i].resize(n2-1-g2_outgoing[i].size());
-        for(int j=0;j<n2;j++) {
-            if(!isPresent[j])
-                not_out_g2[i][k++] = j;
-            else
-                isPresent[j] = 0;
-        }   
-    }
-    // edges in g1, not in g2 clauses: O(m1*(n2*n2-m2))
-    for(auto &i : e1)
-        for(int &j : domain[i.X]) 
-            for(int &l : not_out_g2[j])
-                if(mp[{i.Y, l}]) {
-                    ans += to_string(-mp[{i.X, j}]) + " " + to_string(-mp[{i.Y, l}]) + " 0\n";
-                    noc++;
-                }
-    // edges in g2, not in g1 clauses: O(m2*(n1*n1-m1))
-    for(auto &i : e2)
-        for(int j=0;j<n1;j++) {
-            if(mp[{j, i.X}] == 0) continue;
-            for(int &l : not_out_g1[j])
-                if(mp[{l, i.Y}]) {
-                    ans += to_string(-mp[{j, i.X}]) + " " + to_string(-mp[{l, i.Y}]) + " 0\n";
-                    noc++;
-                }
-        }
 
     ans = "p cnf " + to_string(nov) + " " + to_string(noc) + "\n" + ans;
     sat_input << ans;
