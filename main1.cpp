@@ -50,28 +50,22 @@ int set_apsp_number(vector< vector<int> > &apsp_num_nodes, vector<int> adjacency
                   visited[j] = true;
                   apsp_num_nodes[i][new_level] += 1;
               }
-              else{
-                  //Vertex is visited
-                  if(j == i) {
+              else if(j == i) 
                     cycle_bounds[i] = min(cycle_bounds[i], new_level);
-                  }
-              }
           }
       }
 
       for(int j=1; j<cutoff_height; ++j){
-        if(apsp_num_nodes[i][j] || 1) {
+        if(apsp_num_nodes[i][j] || 1)
           apsp_num_nodes[i][j] += apsp_num_nodes[i][j-1];
-        }
         else{
           max_height_reached = max(max_height_reached, j);
           break;
         }
       }
 
-      if(apsp_num_nodes[i][cutoff_height-1]){
+      if(apsp_num_nodes[i][cutoff_height-1])
         max_height_reached = max(max_height_reached, cutoff_height);
-      }
   }
 
   return max_height_reached;
@@ -257,7 +251,6 @@ int main(int argc, char const *argv[])
 
     if(flag == 0)
     {
-        cout<<"hi\n";
         sat_input << "p cnf 1 2\n";
         sat_input << "1 0\n";
         sat_input << "-1 0\n";
@@ -307,7 +300,7 @@ int main(int argc, char const *argv[])
                 }
         }
     }
-
+/*
     // neighbour clauses: O(n1*n2 + m1*m2)
     for(int i=0;i<n1;i++)
     {
@@ -350,6 +343,53 @@ int main(int argc, char const *argv[])
             }
         }
     }
+*/
+    vector<int> not_out_g1[n1], not_out_g2[n2]; // complement graphs
+    bool isPresent[n2]{};
+    // g1 complement: O(n1*n1)
+    for(int i=0;i<n1;i++)
+    {
+        for(int &j : g1_outgoing[i]) isPresent[j] = 1;
+        isPresent[i] = 1; int k = 0;
+        not_out_g1[i].resize(n1-1-g1_outgoing[i].size());
+        for(int j=0;j<n1;j++) {
+            if(!isPresent[j])
+                not_out_g1[i][k++] = j;
+            else
+                isPresent[j] = 0;
+        }   
+    }
+    // g2 complement: O(n2*n2)
+    for(int i=0;i<n2;i++)
+    {
+        for(int &j : g2_outgoing[i]) isPresent[j] = 1;
+        isPresent[i] = 1; int k = 0;
+        not_out_g2[i].resize(n2-1-g2_outgoing[i].size());
+        for(int j=0;j<n2;j++) {
+            if(!isPresent[j])
+                not_out_g2[i][k++] = j;
+            else
+                isPresent[j] = 0;
+        }   
+    }
+    // edges in g1, not in g2 clauses: O(m1*(n2*n2-m2))
+    for(auto &i : e1)
+        for(int &j : domain[i.X]) 
+            for(int &l : not_out_g2[j])
+                if(mp[{i.Y, l}]) {
+                    ans += to_string(-mp[{i.X, j}]) + " " + to_string(-mp[{i.Y, l}]) + " 0\n";
+                    noc++;
+                }
+    // edges in g2, not in g1 clauses: O(m2*(n1*n1-m1))
+    for(auto &i : e2)
+        for(int j=0;j<n1;j++) {
+            if(mp[{j, i.X}] == 0) continue;
+            for(int &l : not_out_g1[j])
+                if(mp[{l, i.Y}]) {
+                    ans += to_string(-mp[{j, i.X}]) + " " + to_string(-mp[{l, i.Y}]) + " 0\n";
+                    noc++;
+                }
+        }
 
     ans = "p cnf " + to_string(nov) + " " + to_string(noc) + "\n" + ans;
     sat_input << ans;
