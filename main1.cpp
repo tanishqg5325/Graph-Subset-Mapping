@@ -55,7 +55,7 @@ int set_apsp_number(vector< vector<int> > &apsp_num_nodes, vector<int> adjacency
       }
 
       for(int j=1; j<cutoff_height; ++j){
-        if(apsp_num_nodes[i][j] || 1)
+        if(apsp_num_nodes[i][j])
           apsp_num_nodes[i][j] += apsp_num_nodes[i][j-1];
         else{
           max_height_reached = max(max_height_reached, j);
@@ -138,6 +138,25 @@ int main(int argc, char const *argv[])
     for(auto &i : e1){ g1_outgoing[i.X].pb(i.Y); g1_incoming[i.Y].pb(i.X); g1_undirected[i.X].pb(i.Y); g1_undirected[i.Y].pb(i.X);}
     for(auto &i : e2){ g2_outgoing[i.X].pb(i.Y); g2_incoming[i.Y].pb(i.X); g2_undirected[i.X].pb(i.Y); g2_undirected[i.Y].pb(i.X);}
 
+    vector<int> g1_isolated, g2_isolated;
+
+    for(int i=0;i<n1;i++)
+        if(g1_incoming[i].empty() && g1_outgoing[i].empty())
+            g1_isolated.pb(i);
+
+    for(int i=0;i<n2;i++)
+        if(g2_incoming[i].empty() && g2_outgoing[i].empty())
+            g2_isolated.pb(i);
+
+    if(g1_isolated.size() > g2_isolated.size())
+    {
+        sat_input << "p cnf 1 2\n";
+        sat_input << "1 0\n";
+        sat_input << "-1 0\n";
+        sat_input.close();
+        return 0;
+    }
+    
     vector< vector<int> > g1_num_nodes_arriving(n1, vector<int>(n1, 0));
     vector< vector<int> > g1_num_nodes_reachable(n1, vector<int>(n1, 0));
     vector< vector<int> > g2_num_nodes_arriving(n2, vector<int>(n1, 0));  //Size is n1 only, since n1<=n2
@@ -167,28 +186,20 @@ int main(int argc, char const *argv[])
     map<pii, int> mp; bool flag = 1, to_insert_in_domain;
     vector<int> domain[n1];
 
-    vector<int> g2_isolated;
-    for(int i=0;i<n2;i++)
-        if(g2_incoming[i].empty() && g2_outgoing[i].empty())
-            g2_isolated.pb(i);
-
-    int g1_isolated_mapping[n1], k = 0; bool isAlreadyMapped[n2]{};
-    for(int i=0;i<n1;i++)
+    int g1_isolated_mapping[n1]{}, k = g1_isolated.size(); bool isAlreadyMapped[n2]{};
+    for(int i=0;i<k;i++)
     {
-        if(g1_outgoing[i].empty() && g1_incoming[i].empty() && k < g2_isolated.size()) {
-            isAlreadyMapped[g2_isolated[k]] = true;
-            g1_isolated_mapping[i] = g2_isolated[k++];
-        }
-        else
-            g1_isolated_mapping[i] = -1;
+        int p = g1_isolated[i], q = g2_isolated[i];
+        g1_isolated_mapping[p] = q+1;
+        isAlreadyMapped[q] = 1;
     }
 
     for(int i=0;i<n1;i++)
     {
-        if(g1_isolated_mapping[i] != -1)
+        if(g1_isolated_mapping[i])
         {
-            mp_temp[i][g1_isolated_mapping[i]] = ++nov;
-            encoding << i+1 << " " << g1_isolated_mapping[i]+1 << " " << nov << "\n";
+            encoding << i+1 << " " << g1_isolated_mapping[i] << " " << (++nov) << "\n";
+            ans += to_string(nov) + " 0\n"; noc++;
             continue;
         }
         for(int j=0;j<n2;j++)
@@ -205,9 +216,8 @@ int main(int argc, char const *argv[])
                 for(int k=1; k<n1; ++k){
                     //Number of nodes arriving with shortest path of length <= k and Number of nodes reachable with shortest path of length <= k
                     bool to_break = (g1_num_nodes_reachable[i][k] == 0) && (g1_num_nodes_arriving[i][k] == 0) && (g1_num_nodes_undirected[i][k] == 0);
-                    if(to_break){  //Limiting height reached, no use to search further
+                    if(to_break)
                         break;
-                    }
 
                     if(g2_num_nodes_reachable[j][k] == 0)
                         g2_num_nodes_reachable[j][k] = g2_num_nodes_reachable[j][k-1];
@@ -247,14 +257,10 @@ int main(int argc, char const *argv[])
         return 0;
     }
 
-    for(int i=0;i<n1;i++)
-        if(g1_isolated_mapping[i] != -1)
-            ans += to_string(mp_temp[i][g1_isolated_mapping[i]]) + " 0\n";
-
     // atleast one mapping clauses: O(n1*n2)
     for(int i=0;i<n1;i++)
     {
-        if(g1_isolated_mapping[i] != -1) continue;
+        if(g1_isolated_mapping[i]) continue;
         for(int &j : domain[i])
             ans += to_string(mp_temp[i][j]) + " ";
         ans += "0\n"; noc++;
@@ -263,7 +269,6 @@ int main(int argc, char const *argv[])
     // exactly one mapping clauses: O(n1*n2*n2)
     for(int i=0;i<n1;i++)
     {
-        if(g1_isolated_mapping[i] != -1) continue;
         int l = domain[i].size();
         // if (l < n2 - 2) continue;
         for(int j=0;j<l;j++)
@@ -276,10 +281,10 @@ int main(int argc, char const *argv[])
     // one-one mapping: O(n1*n1*n2)
     for(int i=0;i<n1;i++)
     {
-        if(g1_isolated_mapping[i] != -1) continue;
+        if(g1_isolated_mapping[i]) continue;
         for(int j=i+1;j<n1;j++)
         {
-            if(g1_isolated_mapping[j] != -1) continue;
+            if(g1_isolated_mapping[j]) continue;
             int p, q;
             if(domain[i].size() <= domain[j].size()) p = i, q = j;
             else p = j, q = i;
@@ -295,7 +300,6 @@ int main(int argc, char const *argv[])
     for(int i=0;i<n1;i++)
     {
         if(g1_outgoing[i].empty()) continue;
-        if(g1_isolated_mapping[i] != -1) continue;
         for(int &j : domain[i])
         {
             tmp = to_string(-mp_temp[i][j]) + " ";
@@ -314,13 +318,13 @@ int main(int argc, char const *argv[])
     bool isPresent[n1]{};
     for(int i=0;i<n1;i++)
     {
-        if(g1_isolated_mapping[i] != -1) continue;
+        if(g1_isolated_mapping[i]) continue;
         for(int &j : g1_outgoing[i]) isPresent[j] = 1;
         isPresent[i] = 1;
         for(int j=0;j<n1;j++)
         {
             if(isPresent[j]) {isPresent[j] = 0; continue;}
-            if(g1_isolated_mapping[j] != -1) continue;
+            if(g1_isolated_mapping[j]) continue;
             for(int &k : domain[i])
             {
                 if(g2_outgoing[k].empty()) continue;
