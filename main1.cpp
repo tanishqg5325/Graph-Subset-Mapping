@@ -126,6 +126,13 @@ int main(int argc, char const *argv[])
         return 0;
     }
 
+    int mp_temp[n1][n2];
+    for(int i=0; i<n1; ++i){
+        for(int j=0; j<n2; ++j){
+            mp_temp[i][j] = 0;
+        }
+    }
+
     vector<int> g1_incoming[n1], g1_outgoing[n1], g2_incoming[n2], g2_outgoing[n2];     // Incoming and Outgoing adjacency lists of g1 and g2
     vector<int> g1_undirected[n1], g2_undirected[n2]; //Undirected adjacency lists
     for(auto &i : e1){ g1_outgoing[i.X].pb(i.Y); g1_incoming[i.Y].pb(i.X); g1_undirected[i.X].pb(i.Y); g1_undirected[i.Y].pb(i.X);}
@@ -180,7 +187,7 @@ int main(int argc, char const *argv[])
     {
         if(g1_isolated_mapping[i] != -1)
         {
-            mp[{i, g1_isolated_mapping[i]}] = ++nov;
+            mp_temp[i][g1_isolated_mapping[i]] = ++nov;
             encoding << i+1 << " " << g1_isolated_mapping[i]+1 << " " << nov << "\n";
             continue;
         }
@@ -188,9 +195,10 @@ int main(int argc, char const *argv[])
         {
             if(isAlreadyMapped[j]) continue;
             to_insert_in_domain = true;
-
+            // to_insert_in_domain = (g1_outgoing[i].size() <= g2_outgoing[j].size()) && (g1_incoming[i].size() <= g2_incoming[j].size());
             if(g1_cycle_bounds_directed_normal[i] < g2_cycle_bounds_directed_normal[j])
                 to_insert_in_domain = false;
+                // break;
 
             //Checking for All Pair Shortest Path Lengths
             if(to_insert_in_domain){
@@ -221,7 +229,7 @@ int main(int argc, char const *argv[])
             }
 
             if(to_insert_in_domain){
-                mp[{i, j}] = ++nov;
+                mp_temp[i][j] = ++nov;
                 domain[i].pb(j);
                 encoding << i+1 << " " << j+1 << " " << nov << "\n";
             }
@@ -241,14 +249,14 @@ int main(int argc, char const *argv[])
 
     for(int i=0;i<n1;i++)
         if(g1_isolated_mapping[i] != -1)
-            ans += to_string(mp[{i, g1_isolated_mapping[i]}]) + " 0\n";
+            ans += to_string(mp_temp[i][g1_isolated_mapping[i]]) + " 0\n";
 
     // atleast one mapping clauses: O(n1*n2)
     for(int i=0;i<n1;i++)
     {
         if(g1_isolated_mapping[i] != -1) continue;
         for(int &j : domain[i])
-            ans += to_string(mp[{i, j}]) + " ";
+            ans += to_string(mp_temp[i][j]) + " ";
         ans += "0\n"; noc++;
     }
 
@@ -257,9 +265,10 @@ int main(int argc, char const *argv[])
     {
         if(g1_isolated_mapping[i] != -1) continue;
         int l = domain[i].size();
+        // if (l < n2 - 2) continue;
         for(int j=0;j<l;j++)
             for(int k=j+1;k<l;k++) {
-                ans += to_string(-mp[{i, domain[i][j]}]) + " " + to_string(-mp[{i, domain[i][k]}]) + " 0\n";
+                ans += to_string(-mp_temp[i][domain[i][j]]) + " " + to_string(-mp_temp[i][domain[i][k]]) + " 0\n";
                 noc++;
             }
     }
@@ -275,27 +284,27 @@ int main(int argc, char const *argv[])
             if(domain[i].size() <= domain[j].size()) p = i, q = j;
             else p = j, q = i;
             for(int &l : domain[p])
-                if(mp[{q, l}]) {
-                    ans += to_string(-mp[{p, l}]) + " " + to_string(-mp[{q, l}]) + " 0\n";
+                if(mp_temp[q][l]) {
+                    ans += to_string(-mp_temp[p][l]) + " " + to_string(-mp_temp[q][l]) + " 0\n";
                     noc++;
                 }
         }
     }
 
-    // neighbour clauses: O(n1*n2 + m1*m2)
+    // // neighbour clauses: O(n1*n2 + m1*m2)
     for(int i=0;i<n1;i++)
     {
         if(g1_outgoing[i].empty()) continue;
         if(g1_isolated_mapping[i] != -1) continue;
         for(int &j : domain[i])
         {
-            tmp = to_string(-mp[{i, j}]) + " ";
+            tmp = to_string(-mp_temp[i][j]) + " ";
             for(int &k : g1_outgoing[i])
             {
                 ans += tmp;
                 for(int &l : g2_outgoing[j])
-                    if(mp[{k, l}])
-                        ans += to_string(mp[{k, l}]) + " ";
+                    if(mp_temp[k][l])
+                        ans += to_string(mp_temp[k][l]) + " ";
                 ans += "0\n"; noc++;
             }
         }
@@ -315,10 +324,10 @@ int main(int argc, char const *argv[])
             for(int &k : domain[i])
             {
                 if(g2_outgoing[k].empty()) continue;
-                tmp = to_string(-mp[{i, k}]) + " ";
+                tmp = to_string(-mp_temp[i][k]) + " ";
                 for(int &l : g2_outgoing[k])
-                    if(mp[{j, l}]) {
-                        ans += tmp + to_string(-mp[{j, l}]) + " 0\n";
+                    if(mp_temp[j][l]) {
+                        ans += tmp + to_string(-mp_temp[j][l]) + " 0\n";
                         noc++;
                     }
             }
