@@ -176,7 +176,7 @@ int main(int argc, char const *argv[])
     int nov = 0, noc = 0; // nov = number of variables, noc = number of clauses
 
     // encoding for each variable
-    map<pii, int> mp; bool flag = 1, to_insert_in_domain;
+    int mp[n1][n2]{}; bool flag = 1, to_insert_in_domain;
     vector<int> domain[n1];
 
     int g1_isolated_mapping[n1]{}, k = g1_isolated.size(); bool isAlreadyMapped[n2]{};
@@ -231,7 +231,7 @@ int main(int argc, char const *argv[])
             }
 
             if(to_insert_in_domain){
-                mp[{i, j}] = ++nov;
+                mp[i][j] = ++nov;
                 domain[i].pb(j);
                 encoding << i+1 << " " << j+1 << " " << nov << "\n";
             }
@@ -254,7 +254,7 @@ int main(int argc, char const *argv[])
     {
         if(g1_isolated_mapping[i]) continue;
         for(int &j : domain[i])
-            ans += to_string(mp[{i, j}]) + " ";
+            ans += to_string(mp[i][j]) + " ";
         ans += "0\n"; noc++;
     }
 
@@ -264,7 +264,7 @@ int main(int argc, char const *argv[])
         int l = domain[i].size();
         for(int j=0;j<l;j++)
             for(int k=j+1;k<l;k++) {
-                ans += to_string(-mp[{i, domain[i][j]}]) + " " + to_string(-mp[{i, domain[i][k]}]) + " 0\n";
+                ans += to_string(-mp[i][domain[i][j]]) + " " + to_string(-mp[i][domain[i][k]]) + " 0\n";
                 noc++;
             }
     }
@@ -280,8 +280,8 @@ int main(int argc, char const *argv[])
             if(domain[i].size() <= domain[j].size()) p = i, q = j;
             else p = j, q = i;
             for(int &l : domain[p])
-                if(mp[{q, l}]) {
-                    ans += to_string(-mp[{p, l}]) + " " + to_string(-mp[{q, l}]) + " 0\n";
+                if(mp[q][l]) {
+                    ans += to_string(-mp[p][l]) + " " + to_string(-mp[q][l]) + " 0\n";
                     noc++;
                 }
         }
@@ -293,13 +293,13 @@ int main(int argc, char const *argv[])
         if(g1_outgoing[i].empty()) continue;
         for(int &j : domain[i])
         {
-            tmp = to_string(-mp[{i, j}]) + " ";
+            tmp = to_string(-mp[i][j]) + " ";
             for(int &k : g1_outgoing[i])
             {
                 ans += tmp;
                 for(int &l : g2_outgoing[j])
-                    if(mp[{k, l}])
-                        ans += to_string(mp[{k, l}]) + " ";
+                    if(mp[k][l])
+                        ans += to_string(mp[k][l]) + " ";
                 ans += "0\n"; noc++;
             }
         }
@@ -319,10 +319,10 @@ int main(int argc, char const *argv[])
             for(int &k : domain[i])
             {
                 if(g2_outgoing[k].empty()) continue;
-                tmp = to_string(-mp[{i, k}]) + " ";
+                tmp = to_string(-mp[i][k]) + " ";
                 for(int &l : g2_outgoing[k])
-                    if(mp[{j, l}]) {
-                        ans += tmp + to_string(-mp[{j, l}]) + " 0\n";
+                    if(mp[j][l]) {
+                        ans += tmp + to_string(-mp[j][l]) + " 0\n";
                         noc++;
                     }
             }
