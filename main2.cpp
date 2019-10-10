@@ -13,9 +13,7 @@ using namespace std;
 typedef long long ll;
 typedef pair<int,int> pii;
 
-map<int, pii> mp;
-
-void processLine(string line)
+void processLine(string line, pii mp[])
 {
     stringstream ss(line); string ver; vector<string> v;
     while(ss >> ver) v.pb(ver);
@@ -45,11 +43,15 @@ int main(int argc, char const *argv[])
     }
 
     ifstream encoding(file_name + ".encoding");
+    int n1, n2; encoding >> n1 >> n2;
+    int n = n1 * n2;
+    pii mp[n+1];
 
+    getline(encoding, line);
     while(getline(encoding, line))
     {
         if(line == "") break;
-        processLine(line);
+        processLine(line, mp);
     }
     encoding.close();
 

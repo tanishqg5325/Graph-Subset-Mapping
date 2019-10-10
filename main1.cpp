@@ -187,6 +187,8 @@ int main(int argc, char const *argv[])
         isAlreadyMapped[q] = 1;
     }
 
+    encoding << n1 << " " << n2 << "\n";
+
     for(int i=0;i<n1;i++)
     {
         if(g1_isolated_mapping[i])
