@@ -141,7 +141,7 @@ int main(int argc, char const *argv[])
         if(g2_incoming[i].empty() && g2_outgoing[i].empty())
             g2_isolated.pb(i);
 
-    if(g1_isolated.size() != g2_isolated.size())
+    if(g1_isolated.size() > g2_isolated.size())
     {
         sat_input << "p cnf 1 2\n";
         sat_input << "1 0\n";
